@@ -12,6 +12,7 @@ Discover IDs from the current public catalogs:
 Read the setup guide: https://docs.therundown.io/data-mcp
 Read the documentation index: https://docs.therundown.io/llms.txt
 The separate documentation MCP is https://docs.therundown.io/mcp and searches docs only.
+Documentation MCP configuration: https://github.com/TheRundown/documentation-mcp
 
 Run from a checked-out source tree with Node.js 22+ using `npm ci --ignore-scripts`
 followed by `npm test`, or download the versioned 0.2.1 ZIP from the setup guide.
