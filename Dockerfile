@@ -1,0 +1,14 @@
+FROM node:22.23.2-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --omit=dev
+
+COPY server.mjs hosted.mjs ./
+
+USER node
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "const http = require('node:http'); const origin = new URL(process.env.THERUNDOWN_MCP_PUBLIC_ORIGIN); const request = http.request({ hostname: process.env.THERUNDOWN_MCP_BIND_HOST || '127.0.0.1', port: Number(process.env.THERUNDOWN_MCP_PORT || 3000), path: '/mcp', method: 'GET', headers: { Host: origin.host }, timeout: 3000 }, (response) => { response.resume(); response.on('end', () => process.exit(response.statusCode === 405 && response.headers.allow === 'POST' ? 0 : 1)); }); request.on('timeout', () => request.destroy(new Error('timeout'))); request.on('error', () => process.exit(1)); request.end();"]
+
+CMD ["node", "hosted.mjs"]
