@@ -1,6 +1,6 @@
 # Data MCP design and release criteria
 
-Status: local scaffold, September 6, 2026. Owner: TheRundown.
+Status: local source 0.2.1, September 9, 2026. Owner: TheRundown.
 
 ## Scope
 
@@ -31,6 +31,13 @@ Dated event tools require 1–12 canonical market IDs and 1–10 affiliate IDs, 
 Dated price projection preserves participant identity/type, market/period, line ID/value, affiliate ID, price, main-line state, and upstream update time. Futures omit line IDs and return only public event identity, schedule, settlement, market IDs, and open per-affiliate main lines. Main lines belong to each affiliate; different books can have different main values. Missing line values remain null (for example, moneyline). The scaffold does not calculate best price, implied probability, edge, or consensus, so it never mixes exchange/prediction-market quotes into sportsbook ranking.
 
 The result envelope is `{source_url, retrieved_at, usage, data}` in structured content and JSON text. Source URLs are reproducible and credential-free. Catalog, date-market, event, and main-line pagination provides `items`, `total`, `page`, `limit`, and `next_page`; each local page is a fresh upstream snapshot, not a stable cursor or billing optimization. Futures preserves upstream `count`, `total`, `has_more`, and `next_cursor`; a cursor page is still metered and may be partial. Catalog presence and empty market responses are not evidence of full or absent coverage.
+
+`therundown://brief` exposes the Build with AI rules and first conversation as
+Markdown. Initialization includes the same instructions. Both are local
+discovery operations with no Product API call. Empty successes add an `empty`
+explanation and scope outside `data`, preserving pagination shape. Errors expose
+recognized plan/entitlement/usage/retry fields with unknown values set to null;
+error bodies are bounded to 64 KiB and never echoed.
 
 ## Request and credential boundaries
 

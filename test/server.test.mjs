@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createDataServer } from '../server.mjs';
+import { AGENT_BRIEF, FIRST_CONVERSATION, createDataServer } from '../server.mjs';
 import { getSmokeScope, hasExpectedTools, selectEventId } from '../smoke.mjs';
 
 const NODE22 = process.execPath;
@@ -602,9 +602,106 @@ test('401, 403, and 429 errors are sanitized while retaining status, usage, and 
       assert.equal(value.status, status);
       assert.equal(value.usage['x-datapoints'], '9');
       if (status === 429) assert.equal(value.retry_after, 30);
-      else assert.equal('retry_after' in value, false);
+      else assert.equal(value.retry_after, null);
+      assert.equal(value.plan, null);
+      assert.equal(value.missing_entitlement, null);
+      assert.equal(value.remaining_points, null);
+      assert.deepEqual(result.structuredContent, value);
     });
   }
+});
+
+test('brief resource and initialize instructions share the first conversation without API requests', async () => {
+  await withServer(async () => { throw new Error('No request expected'); }, async (client) => {
+    const listed = await client.listResources();
+    assert.deepEqual(listed.resources.map(({ uri }) => uri), ['therundown://brief']);
+    const resource = await client.readResource({ uri: 'therundown://brief' });
+    assert.equal(resource.contents[0].mimeType, 'text/markdown');
+    assert.equal(resource.contents[0].text, AGENT_BRIEF);
+    assert.equal(client.getInstructions(), AGENT_BRIEF);
+    assert.ok(AGENT_BRIEF.includes(FIRST_CONVERSATION));
+    const tools = await client.listTools();
+    for (const tool of tools.tools) assert.match(tool.description.split('. ')[1], /^Do not /);
+  });
+});
+
+test('403 reports only recognized public entitlement details without guessing the current plan', async () => {
+  await withServer(async () => response({
+    error: 'Futures markets require Ultra plan or higher',
+    token: KEY, internal_context: 'private-upstream-value',
+  }, { status: 403 }), async (client) => {
+    const result = await client.callTool({ name: 'list_futures', arguments: { sport_id: 40 } });
+    const value = jsonResult(result);
+    assert.equal(value.plan, null);
+    assert.equal(value.required_plan, 'ultra');
+    assert.equal(value.missing_entitlement, 'futures');
+    assert.equal(value.remaining_points, null);
+    assert.equal(value.retry_after, null);
+    assert.match(value.source_url, /^https:\/\/therundown\.io\/api\/v2\/sports\/40\/futures\?/);
+    assert.equal(textResult(result).includes('private-upstream-value'), false);
+    assert.equal(textResult(result).includes(KEY), false);
+  });
+});
+
+test('429 distinguishes monthly caps and preserves header plan, remaining points, and retry dates', async () => {
+  const retryDate = new Date(Date.now() + 60_000).toUTCString();
+  await withServer(async () => response({ error: 'Monthly data point limit reached' }, {
+    status: 429,
+    headers: { 'X-Tier': 'free', 'X-Datapoints-Remaining': '45',
+      'X-Datapoints-Monthly-Remaining': '0', 'Retry-After': retryDate },
+  }), async (client) => {
+    const value = jsonResult(await client.callTool({ name: 'list_events', arguments: { sport_id: 3, date: '2026-09-09' } }));
+    assert.equal(value.plan, 'free');
+    assert.equal(value.limit_reason, 'monthly_data_points');
+    assert.equal(value.remaining_points, 45);
+    assert.equal(value.monthly_remaining_points, 0);
+    assert.ok(value.retry_after >= 58 && value.retry_after <= 60);
+  });
+});
+
+test('malformed, oversized, and unrecognized error bodies preserve HTTP failure and hide body content', async () => {
+  const bodies = ['not-json-private', JSON.stringify({ error: { toString: 'private' }, plan: 'enterprise' }),
+    JSON.stringify({ error: 'private'.repeat(20_000) })];
+  for (const body of bodies) {
+    await withServer(async () => new Response(body, { status: 403 }), async (client) => {
+      const result = await client.callTool({ name: 'list_sports', arguments: {} });
+      const value = jsonResult(result);
+      assert.equal(value.status, 403);
+      assert.equal(value.plan, null);
+      assert.equal(value.missing_entitlement, null);
+      assert.equal(textResult(result).includes('private'), false);
+    });
+  }
+});
+
+test('empty dated events explain the exact scope while retaining usage and pagination', async () => {
+  for (const offset of [0, 300]) {
+    await withServer(async () => response({ events: [] }, { headers: { 'X-Datapoints': '0' } }), async (client) => {
+      const value = jsonResult(await client.callTool({ name: 'list_events', arguments: {
+        sport_id: 3, date: '2026-09-09', offset,
+      } }));
+      assert.equal(value.empty.code, 'no_results');
+      assert.match(value.empty.message, /sport 3 on 2026-09-09/);
+      assert.equal(value.empty.scope.date_boundary_offset_minutes, offset);
+      assert.equal(value.empty.scope.timezone, offset === 0 ? 'UTC' : undefined);
+      assert.deepEqual(value.empty.scope.market_ids, [1, 2, 3]);
+      assert.deepEqual(value.empty.scope.affiliate_ids, [19, 23]);
+      assert.deepEqual(value.data, { items: [], total: 0, page: 1, limit: 50, next_page: null });
+      assert.equal(value.usage['x-datapoints'], '0');
+    });
+  }
+});
+
+test('an empty local page does not report an empty slate', async () => {
+  await withServer(async () => response({ events: [{ event_id: 'evt-1', sport_id: 3 }] }), async (client) => {
+    const value = jsonResult(await client.callTool({ name: 'list_events', arguments: {
+      sport_id: 3, date: '2026-09-09', page: 2,
+    } }));
+    assert.equal(value.empty.code, 'page_out_of_range');
+    assert.equal(value.data.total, 1);
+    assert.match(value.empty.message, /Use an earlier page/);
+    assert.doesNotMatch(value.empty.message, /No events/);
+  });
 });
 
 test('timeout, cancellation, oversized body, and redirects remain bounded and sanitized', async () => {
@@ -625,7 +722,7 @@ test('timeout, cancellation, oversized body, and redirects remain bounded and sa
     }, { once: true });
   }), async (client) => {
     const controller = new AbortController();
-    const pending = client.callTool({ name: 'list_sports', arguments: {} }, { signal: controller.signal });
+    const pending = client.callTool({ name: 'list_sports', arguments: {} }, undefined, { signal: controller.signal });
     setTimeout(() => controller.abort(), 10);
     await assert.rejects(pending);
   }, { timeoutMs: 100 });
