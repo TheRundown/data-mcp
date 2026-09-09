@@ -1,4 +1,7 @@
-FROM node:22.23.2-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+FROM node:22.23.2-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+
+# Consume signed security updates from the pinned Alpine release branch.
+RUN apk upgrade --no-cache
 
 WORKDIR /app
 
