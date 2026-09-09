@@ -6,6 +6,11 @@ A local, read-only Model Context Protocol server for TheRundown Product API. It 
 
 This directory is a runnable source example. There is no hosted data MCP endpoint or published npm package. The existing `https://docs.therundown.io/mcp` endpoint searches documentation only.
 
+The checked-out source is version **0.2.1**. It adds the `therundown://brief`
+resource, shared first-conversation instructions, and structured error and empty
+result explanations. The downloadable release below is still **0.2.0** until
+the new versioned ZIP is published and verified.
+
 Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.0.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.0.sha256), and extract it. The official ZIP SHA-256 is `d61934849b7ab017ecd9bdc65b1ad805453a81e73ab172485c785799449d3188`. The included [ZIP manifest](releases/0.2.0/MANIFEST.json) is the unmodified manifest for that ZIP; it verifies the ZIP contents, including its original README. This repository README adds repository setup material. From the extracted ZIP directory:
 
 ```sh
@@ -82,5 +87,24 @@ and the returned usage headers. Explain empty results without inventing odds.
 With an eligible key, `THERUNDOWN_SMOKE_LIVE=1 npm run smoke` also requests live `[41,42,43]`. `THERUNDOWN_SMOKE_DATE=YYYY-MM-DD` and `THERUNDOWN_SMOKE_SPORT_ID` select the dated scope. For a bounded Ultra+ competition check, set `THERUNDOWN_SMOKE_FUTURES=1` and a sport such as `40` (PGA) or `41` (Formula 1); it requests only market `1141` and affiliates `19,23`. The check has a 60-second deadline, verifies all six tool names, and reports its UTC check time, scope, selected event ID, source URLs, usage, and counts. Require `status: "ok"`, six tools, and positive event/main-line counts. Empty data is inconclusive and exits 2. These requests are opt-in and metered.
 
 Usage, API plan delays, and entitlements apply to every request. Catalog, date-market, event, and main-line pages paginate locally, so each page refetches a snapshot and is separately metered. `list_futures` uses the API's upstream opaque cursor and page limit; each cursor page is still a metered request and is only a partial competition listing when `has_more` is true. Results expose safe source URLs, retrieval timestamps, API usage headers, and per-price `updated_at`; a retrieval timestamp is not evidence that a price is fresh.
+
+## Agent brief and errors in 0.2.1
+
+Read `therundown://brief` through MCP resources for the current Build with AI
+rules and first conversation. Initialization returns the same instructions;
+neither operation calls the Product API.
+
+HTTP failures return `status`, `plan`, `missing_entitlement`, `required_plan`,
+`retry_after` (seconds), `remaining_points`, `monthly_remaining_points`, and
+`limit_reason`, alongside the safe source URL, retrieval time, and usage headers.
+Fields stay `null` when the API does not supply a recognized value. The server
+does not guess the current plan from a denied feature. Raw upstream error bodies
+are never returned, and errors do not trigger automatic retries.
+
+An empty successful result retains its normal `data` shape and adds `empty`
+with a code, explanation, and request scope. Dated results report the sport,
+date, and date-boundary offset (UTC at zero); a page beyond existing results is
+identified separately from an empty slate. Empty odds do not establish absent
+coverage.
 
 See [the setup guide](https://docs.therundown.io/data-mcp), [DESIGN.md](DESIGN.md), [authentication](https://docs.therundown.io/authentication), and [billing](https://docs.therundown.io/rate-limits). Read the [OpenAPI specification](https://docs.therundown.io/openapi.yaml), [sports catalog](https://therundown.io/api/v2/sports), [markets catalog](https://therundown.io/api/v2/markets), [affiliates catalog](https://therundown.io/api/v2/affiliates), [TheRundown llms.txt](https://therundown.io/llms.txt), and [documentation llms.txt](https://docs.therundown.io/llms.txt) for current public contracts and IDs.
