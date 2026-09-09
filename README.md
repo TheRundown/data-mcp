@@ -6,6 +6,10 @@ A local, read-only Model Context Protocol server for TheRundown Product API. It 
 
 This directory is a runnable source example. There is no hosted data MCP endpoint or published npm package. The existing `https://docs.therundown.io/mcp` endpoint searches documentation only.
 
+The separate [HTTP adapter candidate](HOSTED.md) is prepared for a future
+operated service. It is excluded from the local ZIP and is never started by
+`npm start`. No hosted data endpoint is available to install today.
+
 The checked-out source is version **0.2.1**. It adds the `therundown://brief`
 resource, shared first-conversation instructions, and structured error and empty
 result explanations. The downloadable release below is still **0.2.0** until
