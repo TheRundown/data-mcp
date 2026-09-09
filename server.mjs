@@ -284,7 +284,9 @@ async function readBoundedJson(response, maxBytes = MAX_RESPONSE_BYTES) {
       size += value.byteLength;
       if (size > maxBytes) {
         await reader.cancel();
-        throw new ApiError('response_too_large', 'Response exceeds 4 MiB. Request fewer markets or affiliates.');
+        throw new ApiError('response_too_large', maxBytes === MAX_RESPONSE_BYTES
+          ? 'Response exceeds 4 MiB. Request fewer markets or affiliates.'
+          : `Response exceeds ${maxBytes} bytes.`);
       }
       chunks.push(value);
     }
