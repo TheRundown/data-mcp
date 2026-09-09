@@ -13,7 +13,7 @@ MCP client → local stdio process → HTTPS Product API
        X-TheRundown-Key upstream
 ```
 
-The official MCP SDK owns protocol negotiation, framing, cancellation, and tool schema validation. This scaffold registers tools with strict Zod input schemas. It has no HTTP listener, OAuth provider, remote session store, or published package identity. The documentation MCP remains a separate service.
+The official MCP SDK owns protocol negotiation, framing, cancellation, and tool schema validation. The local executable registers tools with strict Zod input schemas. It has no HTTP listener, OAuth provider, remote session store, or published package identity. The documentation MCP remains a separate service. A separately started HTTP implementation candidate is documented in the repository's `HOSTED.md` and excluded from local ZIPs.
 
 ## Contract
 
@@ -60,7 +60,7 @@ The smoke client defaults to pre-match markets 1/2/3 for sport 3 and affiliates 
 1. Keep the tested source commit immutable. From that exact commit, create a separate website artifact change using `bundle.py`; it must produce the versioned ZIP, checksum, and manifest with matching source hashes.
 2. Deploy the website artifact and verify the public ZIP, checksum, manifest, and finite smoke proof before merging the guide that links to it. Keep the package private until that download is available.
 3. Choose distribution: a versioned package or MCPB for local clients, or an operated Streamable HTTP service. Provide reproducible installation, a license decision, ownership metadata, and a support/update policy.
-4. A hosted service needs MCP authentication, per-user upstream-key isolation, request/rate budgets, secret redaction, Origin validation, session isolation and bounded shutdown. Implement the MCP authorization specification; do not treat a caller's MCP access token as a Product API key or blindly pass it to the upstream API. No hosted URL is advertised by this scaffold.
+4. The next hosted candidate uses explicitly configured Product API keys in either `X-TheRundown-Key` or `Authorization: Bearer`, with hard per-key/process concurrency, origin validation, bounded requests and cancellation. These are Product API credentials, not OAuth access tokens. It has no OAuth discovery, automatic account linking, or hosted availability claim. The local ZIP remains independently runnable over stdio. See the repository's `HOSTED.md` for the separate implementation and rollout requirements.
 5. Publish a real artifact and valid `server.json` using a verified namespace, then submit registry metadata. Do not create metadata pointing to a nonexistent npm package or remote URL. Confirm directory-specific prerequisites before submitting.
 6. Verify the registry entry, install from the public artifact, and record a working listing URL before claiming availability in public materials.
 
