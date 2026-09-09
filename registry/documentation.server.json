@@ -1,0 +1,14 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.TheRundown/documentation",
+  "title": "TheRundown Documentation MCP",
+  "description": "Official TheRundown API documentation search. No live data or authenticated Product API calls.",
+  "version": "1.0.0",
+  "websiteUrl": "https://docs.therundown.io/documentation-mcp",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://docs.therundown.io/mcp"
+    }
+  ]
+}
