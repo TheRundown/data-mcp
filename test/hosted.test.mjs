@@ -170,7 +170,8 @@ test('accepts either supported credential form and keeps upstream tenant credent
 });
 
 test('rejects absent, malformed, duplicated, ambiguous, and query-string credentials before MCP handling', async () => {
-  const service = await hosted(async () => response({ sports: [] }));
+  let reads = 0;
+  const service = await hosted(async () => { reads += 1; return response({ sports: [] }); });
   try {
     const absent = await fetch(`${service.origin}/mcp`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(REQUEST),
@@ -181,6 +182,13 @@ test('rejects absent, malformed, duplicated, ambiguous, and query-string credent
       headers: { Authorization: `Bearer ${KEY_B}` },
     });
     assert.equal(ambiguous.status, 401);
+    for (const key of [`${KEY_A},${KEY_B}`, `${KEY_A}, ${KEY_B}`, `${KEY_A} ${KEY_B}`]) {
+      const rejected = await post(service.origin, { key, body: callSports() });
+      assert.equal(rejected.status, 401);
+      const text = await rejected.text();
+      assert.equal(text.includes(KEY_A), false);
+      assert.equal(text.includes(KEY_B), false);
+    }
     assert.equal((await post(service.origin, { path: `/mcp?key=${KEY_A}` })).status, 403);
 
     const duplicate = await rawPost(service.origin, {
@@ -192,6 +200,7 @@ test('rejects absent, malformed, duplicated, ambiguous, and query-string credent
       Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json',
       Authorization: `Bearer ${KEY_A}`, 'X-API-Key': KEY_B,
     }), 401);
+    assert.equal(reads, 0);
   } finally {
     await service.close();
   }
@@ -219,7 +228,14 @@ test('validates host and origin and rejects unsupported method, content type, ba
     assert.equal((await fetch(`${service.origin}/mcp`, {
       method: 'POST', headers: { 'X-TheRundown-Key': KEY_A, 'content-type': 'text/plain' }, body: '{}',
     })).status, 415);
-    assert.equal((await post(service.origin, { body: [REQUEST] })).status, 400);
+    const malformed = await post(service.origin, { body: '{"jsonrpc":' });
+    assert.equal(malformed.status, 400);
+    assert.equal((await malformed.json()).error.message, 'Request body must contain valid JSON.');
+    for (const body of [[REQUEST], null, '42']) {
+      const invalidObject = await post(service.origin, { body });
+      assert.equal(invalidObject.status, 400);
+      assert.equal((await invalidObject.json()).error.message, 'Request must contain one JSON-RPC object.');
+    }
     const base = JSON.stringify(REQUEST);
     const exactLimit = `${base}${' '.repeat((64 * 1024) - Buffer.byteLength(base))}`;
     assert.equal(Buffer.byteLength(exactLimit), 64 * 1024);

@@ -85,9 +85,9 @@ function credentialFrom(req) {
   const raw = hasKey ? req.headers['x-therundown-key'] : req.headers.authorization;
   if (Array.isArray(raw) || typeof raw !== 'string' || !raw || /[\r\n]/.test(raw)) return undefined;
   const key = hasKey ? raw : (/^Bearer ([^\s,]+)$/.exec(raw)?.[1]);
-  // Product keys are header values, never display strings. Reject surrounding
-  // whitespace so one customer cannot occupy multiple semaphore identities.
-  if (!key || key.trim() !== key) return undefined;
+  // Product keys are single header values. Reject whitespace and comma lists
+  // so clients and proxies cannot interpret the credential differently.
+  if (!key || /[\s,]/.test(key)) return undefined;
   return key;
 }
 
@@ -137,16 +137,16 @@ async function readJsonBody(req, signal) {
     signal.addEventListener('abort', abort, { once: true });
     req.on('data', onData);
   });
+  let body;
   try {
-    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      throw new Error('invalid_jsonrpc');
-    }
-    return body;
-  } catch (error) {
-    if (error?.code) throw error;
+    body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
     throw Object.assign(new Error('invalid_json'), { code: 'invalid_json' });
   }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw Object.assign(new Error('invalid_jsonrpc'), { code: 'invalid_jsonrpc' });
+  }
+  return body;
 }
 
 function isAllowedRequest(req, policy) {
@@ -349,6 +349,7 @@ export function createHostedServer({
           : error?.code === 'invalid_json' || error?.code === 'invalid_jsonrpc' ? 400
           : controller.signal.aborted ? 408 : 500;
         const message = status === 413 ? 'Request body exceeds 64 KiB.'
+          : error?.code === 'invalid_json' ? 'Request body must contain valid JSON.'
           : status === 400 ? 'Request must contain one JSON-RPC object.'
           : status === 408 ? 'Request timed out or was cancelled.'
           : 'Unable to process the request.';
