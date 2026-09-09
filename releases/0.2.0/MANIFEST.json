@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "sha256": {
+    "server.mjs": "fb157f000cb7d6062dcc68fa3131912c71c6faa5adda0c9f388fee22ad081de4",
+    "smoke.mjs": "3bd16d3f7ea61784105dfb109bf7041c58fb84f328f759392d1e4e320f723c75",
+    "package.json": "0a1f3b67f38b1d232316d0ff92a356cb4fd5fd679da2c0ddb7fca902c9299064",
+    "package-lock.json": "2a4671f602c4f63fb8cec27aec26ca75f1b2fc17b27e4584d91b64a6b38aaa7c",
+    "README.md": "62a4824c269bda50f6fe8d991adcb8d26622964dd46ffd7f1fc99d3f98b0f206",
+    "DESIGN.md": "294de0bb9cbee66d1b5c0a4e89195160c0ab85e62e1d71f9743bd56fb6f48343",
+    "test/server.test.mjs": "d5dc2f9a9abb6ec4e5e45640b9d3f1cedaf3bdd3b94cc3f698d4f8734d5adda9"
+  }
+}

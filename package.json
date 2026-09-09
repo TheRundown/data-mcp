@@ -1,0 +1,17 @@
+{
+  "name": "therundown-data-mcp-scaffold",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Local read-only MCP example for TheRundown Product API",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.5.4"
+  }
+}
