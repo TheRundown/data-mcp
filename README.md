@@ -8,10 +8,9 @@ This directory is a runnable source example. There is no hosted data MCP endpoin
 
 The checked-out source is version **0.2.1**. It adds the `therundown://brief`
 resource, shared first-conversation instructions, and structured error and empty
-result explanations. The downloadable release below is still **0.2.0** until
-the new versioned ZIP is published and verified.
+result explanations. The published source ZIP contains the same local runtime.
 
-Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.0.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.0.sha256), and extract it. The official ZIP SHA-256 is `d61934849b7ab017ecd9bdc65b1ad805453a81e73ab172485c785799449d3188`. The included [ZIP manifest](releases/0.2.0/MANIFEST.json) is the unmodified manifest for that ZIP; it verifies the ZIP contents, including its original README. This repository README adds repository setup material. From the extracted ZIP directory:
+Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.1.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.1.sha256), and extract it. The official ZIP SHA-256 is `71b7339d9f329262e6ff0279ab2ee185c9a06f05f62671b0ec55ac7678a36e74`. The [ZIP manifest](releases/0.2.1/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
 
 ```sh
 npm ci --ignore-scripts
@@ -32,7 +31,7 @@ For Claude Desktop's manual local configuration, add this to `claude_desktop_con
   "mcpServers": {
     "therundown-data": {
       "command": "/absolute/path/to/node",
-      "args": ["/absolute/path/to/therundown-data-mcp-0.2.0/server.mjs"],
+      "args": ["/absolute/path/to/therundown-data-mcp-0.2.1/server.mjs"],
       "env": { "THERUNDOWN_API_KEY": "YOUR_API_KEY" }
     }
   }
@@ -47,7 +46,7 @@ For Cursor, use the global `~/.cursor/mcp.json` and make the key available in th
     "therundown-data": {
       "type": "stdio",
       "command": "/absolute/path/to/node",
-      "args": ["/absolute/path/to/therundown-data-mcp-0.2.0/server.mjs"],
+      "args": ["/absolute/path/to/therundown-data-mcp-0.2.1/server.mjs"],
       "env": { "THERUNDOWN_API_KEY": "${env:THERUNDOWN_API_KEY}" }
     }
   }
