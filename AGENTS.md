@@ -14,6 +14,9 @@ Preserve participant identity, period information, per-affiliate `is_main_line`,
 and the public `source_id` and `affiliate_source_ids` fields when they are
 returned by the Product API. These public mapping fields are allowed in output;
 do not expose internal provider identifiers or implementation details.
+The local 0.2.0 tools return curated canonical identities. If cross-book mapping
+is needed, read `source_id` and `affiliate_source_ids` through the documented
+Product API; do not assume these fields are included in the local tool summaries.
 
 ## Missing stays missing.
 
