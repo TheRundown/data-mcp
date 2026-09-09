@@ -66,3 +66,27 @@ tokens. It does not advertise OAuth discovery or automatic account linking.
 The local ZIP exporter excludes this file and the HTTP listener; starting
 `server.mjs` continues to use stdio only. Network access is still needed for
 Product API reads.
+
+## Container candidate
+
+The repository includes a generic runtime `Dockerfile` for this implementation
+candidate. It installs only production dependencies and copies only the adapter
+and local server source:
+
+```sh
+docker build -t therundown-data-mcp-hosted .
+docker run --rm \
+  -e THERUNDOWN_MCP_PUBLIC_ORIGIN=https://mcp.example.com \
+  therundown-data-mcp-hosted
+```
+
+The container keeps the adapter on loopback. A same-task HTTPS reverse proxy is
+an operator deployment concern and is not configured by this repository. The
+container health check makes an unauthenticated loopback `GET /mcp`, using the
+configured public origin only to set the required `Host` header; it expects
+`405` and `Allow: POST` and does not read the Product API.
+
+This is source packaging for a future operator rollout, not a statement that a
+hosted MCP service is available. The request and concurrency limits described
+above apply to one container process; a multi-task deployment needs its own
+shared or edge enforcement.
