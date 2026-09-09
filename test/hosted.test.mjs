@@ -27,17 +27,26 @@ async function freePort() {
   return port;
 }
 
-async function hosted(fetchImpl, options = {}) {
-  const port = await freePort();
-  const origin = `http://127.0.0.1:${port}`;
-  const server = createHostedServer({ publicOrigin: origin, fetchImpl, ...options });
-  server.listen(port, '127.0.0.1');
-  await once(server, 'listening');
-  return {
-    origin,
-    server,
-    async close() { await new Promise((resolve) => server.close(resolve)); },
-  };
+async function hosted(fetchImpl, { allocatePort = freePort, ...options } = {}) {
+  // The policy needs the concrete origin before listen. Another test process
+  // can claim a released ephemeral port, so retry that one transient failure.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const port = await allocatePort();
+    const origin = `http://127.0.0.1:${port}`;
+    const server = createHostedServer({ publicOrigin: origin, fetchImpl, ...options });
+    try {
+      server.listen(port, '127.0.0.1');
+      await once(server, 'listening');
+      return {
+        origin,
+        server,
+        async close() { await new Promise((resolve) => server.close(resolve)); },
+      };
+    } catch (error) {
+      server.close(() => {});
+      if (error.code !== 'EADDRINUSE' || attempt === 4) throw error;
+    }
+  }
 }
 
 async function post(origin, { key = KEY_A, authorization, path = '/mcp', body = REQUEST, headers = {} } = {}) {
@@ -95,6 +104,24 @@ test('configuration keeps production origins, process capacity, and request dead
   }
   assert.throws(() => createHostedServer({ publicOrigin: 'https://mcp.example.com', maxConcurrent: 65 }), /at most 64/);
   assert.throws(() => createHostedServer({ publicOrigin: 'https://mcp.example.com', requestTimeoutMs: 60_001 }), /at most 60000/);
+});
+
+test('test listener retries a port claimed between allocation and binding', async () => {
+  const occupied = createNetServer();
+  occupied.listen(0, '127.0.0.1');
+  await once(occupied, 'listening');
+  let attempts = 0;
+  let service;
+  try {
+    service = await hosted(async () => response({ sports: [] }), {
+      allocatePort: () => ++attempts === 1 ? occupied.address().port : freePort(),
+    });
+    assert.equal(attempts, 2);
+    assert.equal((await post(service.origin)).status, 200);
+  } finally {
+    await service?.close();
+    await new Promise((resolve) => occupied.close(resolve));
+  }
 });
 
 test('actual Streamable HTTP client inherits exactly six tools and the brief resource without echoing its credential', async () => {
