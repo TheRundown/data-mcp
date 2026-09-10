@@ -1,6 +1,6 @@
 # Build with TheRundown Data MCP
 
-This repository is the official source for a local, read-only TheRundown Data MCP server. It runs through local stdio and does not provide a hosted data MCP endpoint. The separate documentation MCP is `https://docs.therundown.io/mcp` and searches documentation only.
+This repository is the official source for TheRundown's read-only Data MCP tools, runnable locally over stdio or through the hosted, authenticated Streamable HTTP endpoint at `https://mcp.therundown.io/mcp`. The separate documentation MCP is `https://docs.therundown.io/mcp` and searches documentation only.
 
 ## Resolve the event first.
 
@@ -28,7 +28,7 @@ Use IDs from current API responses rather than guessing them. Exclude retired af
 
 Keep `THERUNDOWN_API_KEY` in the local environment or a client secret mechanism, and send it only in `X-TheRundown-Key`. Do not place real keys in prompts, source files, URLs, examples, logs, or client bundles. Respect plan entitlements, data delay, `X-Datapoints` usage, and `Retry-After`; read-only calls can be billed. Keep requests bounded and do not retry automatically after errors.
 
-The server has exactly six tools: `list_sports`, `list_affiliates`, `list_markets`, `list_events`, `get_main_lines`, and `list_futures`. Consult the [OpenAPI specification](https://docs.therundown.io/openapi.yaml), [API catalogs](https://therundown.io/api/v2/sports), and [data MCP guide](https://docs.therundown.io/data-mcp) before extending an integration. Do not claim a hosted data MCP service or npm package.
+The server has exactly six tools: `list_sports`, `list_affiliates`, `list_markets`, `list_events`, `get_main_lines`, and `list_futures`. Consult the [OpenAPI specification](https://docs.therundown.io/openapi.yaml), [API catalogs](https://therundown.io/api/v2/sports), and [data MCP guide](https://docs.therundown.io/data-mcp) before extending an integration. The hosted endpoint is `https://mcp.therundown.io/mcp`; there is still no published npm package.
 
 Prematch markets `1`, `2`, and `3` are distinct from live variants `41`, `42`,
 and `43`; request live variants explicitly. Dated event reads default to

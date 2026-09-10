@@ -1,10 +1,10 @@
-# Future hosted MCP adapter
+# Hosted MCP adapter
 
-`hosted.mjs` is an implementation candidate for a loopback-only Streamable HTTP adapter for the
-same six read-only tools exported by `server.mjs`. It is not a claim that
-`https://mcp.therundown.io` is deployed, routable, or available today. The
-local stdio MCP remains the published service until an operator provisions and
-verifies a separate rollout.
+`hosted.mjs` is the Streamable HTTP adapter for the same six read-only tools
+exported by `server.mjs`. It is deployed and publicly reachable at
+`https://mcp.therundown.io/mcp` (Streamable HTTP, `POST`). The local stdio MCP
+remains available as a separate, air-gapped install for operators who prefer
+not to depend on a hosted endpoint.
 
 An operator must set a concrete public origin and run it behind an HTTPS
 terminating proxy that preserves the matching `Host` header. The adapter accepts
@@ -67,11 +67,11 @@ The local ZIP exporter excludes this file and the HTTP listener; starting
 `server.mjs` continues to use stdio only. Network access is still needed for
 Product API reads.
 
-## Container candidate
+## Container packaging
 
-The repository includes a generic runtime `Dockerfile` for this implementation
-candidate. It installs only production dependencies and copies only the adapter
-and local server source:
+The repository includes a generic runtime `Dockerfile` for the adapter. It
+installs only production dependencies and copies only the adapter and local
+server source:
 
 ```sh
 docker build -t therundown-data-mcp-hosted .
@@ -86,7 +86,8 @@ container health check makes an unauthenticated loopback `GET /mcp`, using the
 configured public origin only to set the required `Host` header; it expects
 `405` and `Allow: POST` and does not read the Product API.
 
-This is source packaging for a future operator rollout, not a statement that a
-hosted MCP service is available. The request and concurrency limits described
-above apply to one container process; a multi-task deployment needs its own
-shared or edge enforcement.
+This Dockerfile packages the adapter for operator rollouts; it is not a
+statement that the currently hosted `https://mcp.therundown.io/mcp` endpoint
+runs this exact container. The request and concurrency limits described above
+apply to one container process; a multi-task deployment needs its own shared
+or edge enforcement.

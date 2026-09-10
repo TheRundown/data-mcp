@@ -1,4 +1,4 @@
-name: Publish documentation MCP metadata
+name: Publish MCP registry metadata
 
 on:
   workflow_dispatch:
@@ -29,3 +29,5 @@ jobs:
         run: /tmp/mcp-publisher login github-oidc
       - name: Publish documentation-only remote server
         run: /tmp/mcp-publisher publish registry/documentation.server.json
+      - name: Publish data remote server
+        run: /tmp/mcp-publisher publish registry/data.server.json
