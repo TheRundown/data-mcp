@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.TheRundown/data",
+  "title": "TheRundown Data MCP",
+  "description": "Read-only TheRundown sports odds/events via six authenticated Product API tools; API key required.",
+  "version": "0.2.1",
+  "repository": {
+    "url": "https://github.com/TheRundown/data-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://docs.therundown.io/data-mcp",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.therundown.io/mcp"
+    }
+  ]
+}

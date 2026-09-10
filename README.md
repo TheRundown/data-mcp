@@ -4,13 +4,13 @@
 
 A local, read-only Model Context Protocol server for TheRundown Product API. It fetches sports, affiliates, market definitions, events, futures, and open main lines using your own API key. It uses the official MCP SDK and Node.js 22+.
 
-This directory is a runnable source example. There is no hosted data MCP endpoint or published npm package. The existing `https://docs.therundown.io/mcp` endpoint searches documentation only.
+This directory is a runnable source example. The same six tools are also deployed as a hosted, authenticated Streamable HTTP endpoint at `https://mcp.therundown.io/mcp`; there is still no published npm package. The existing `https://docs.therundown.io/mcp` endpoint searches documentation only.
 
 Cursor configuration for that server is in the [Documentation MCP repository](https://github.com/TheRundown/documentation-mcp).
 
-The separate [HTTP adapter candidate](HOSTED.md) is prepared for a future
-operated service. It is excluded from the local ZIP and is never started by
-`npm start`. No hosted data endpoint is available to install today.
+The separate [HTTP adapter](HOSTED.md) implements the hosted endpoint at
+`https://mcp.therundown.io/mcp`. It is excluded from the local ZIP and is
+never started by `npm start`; the ZIP remains a local, stdio-only install.
 
 The checked-out source is version **0.2.1**. It adds the `therundown://brief`
 resource, shared first-conversation instructions, and structured error and empty
