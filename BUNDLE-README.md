@@ -2,8 +2,10 @@
 
 This is the official local, read-only Data MCP from
 [TheRundown/data-mcp](https://github.com/TheRundown/data-mcp).
-`aigeon-ai/therundown` is unofficial. This ZIP runs through local stdio;
-it has no HTTP listener and does not provide a hosted data MCP endpoint.
+`aigeon-ai/therundown` is unofficial. This ZIP runs through local stdio and
+has no HTTP listener. The same six tools are also served by the hosted,
+authenticated Streamable HTTP endpoint at `https://mcp.therundown.io/mcp`,
+which is a separate install path from this bundle.
 The separate [documentation MCP](https://docs.therundown.io/mcp) searches docs.
 
 ## Install
