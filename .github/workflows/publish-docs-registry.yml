@@ -27,7 +27,25 @@ jobs:
           tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
       - name: Authenticate with GitHub OIDC
         run: /tmp/mcp-publisher login github-oidc
-      - name: Publish documentation-only remote server
-        run: /tmp/mcp-publisher publish registry/documentation.server.json
-      - name: Publish data remote server
-        run: /tmp/mcp-publisher publish registry/data.server.json
+      - name: Publish registry manifests
+        run: |
+          set -euo pipefail
+          # The registry rejects re-publishing a version that already exists.
+          # This workflow is dispatch-triggered and must stay re-runnable, so an
+          # already-published version is a no-op rather than a failure. Every
+          # other error still fails the job.
+          publish() {
+            manifest="$1"
+            if output="$(/tmp/mcp-publisher publish "$manifest" 2>&1)"; then
+              printf '%s\n' "$output"
+              return 0
+            fi
+            printf '%s\n' "$output"
+            if printf '%s' "$output" | grep -qF 'cannot publish duplicate version'; then
+              echo "::notice::${manifest} is already published at this version; skipping."
+              return 0
+            fi
+            return 1
+          }
+          publish registry/documentation.server.json
+          publish registry/data.server.json
