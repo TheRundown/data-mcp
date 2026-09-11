@@ -71,7 +71,8 @@ Product API reads.
 
 The repository includes a generic runtime `Dockerfile` for the adapter. It
 installs only production dependencies and copies only the adapter and local
-server source:
+server source. The separate `glama/Dockerfile` runs the local stdio server for
+Glama's directory checks and is not used for hosted rollouts:
 
 ```sh
 docker build -t therundown-data-mcp-hosted .
