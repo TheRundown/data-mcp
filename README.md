@@ -12,11 +12,13 @@ The separate [HTTP adapter](HOSTED.md) implements the hosted endpoint at
 `https://mcp.therundown.io/mcp`. It is excluded from the local ZIP and is
 never started by `npm start`; the ZIP remains a local, stdio-only install.
 
-The checked-out source is version **0.2.1**. It adds the `therundown://brief`
-resource, shared first-conversation instructions, and structured error and empty
-result explanations. The published source ZIP contains the same local runtime.
+The checked-out source is version **0.2.2**. It ships the same local runtime as
+0.2.1, with a bundle README that also names the hosted endpoint. 0.2.1 added the
+`therundown://brief` resource, shared first-conversation instructions, and
+structured error and empty result explanations. The published source ZIP contains
+the same local runtime.
 
-Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.1.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.1.sha256), and extract it. The official ZIP SHA-256 is `71b7339d9f329262e6ff0279ab2ee185c9a06f05f62671b0ec55ac7678a36e74`. The [ZIP manifest](releases/0.2.1/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
+Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.2.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.2.sha256), and extract it. The official ZIP SHA-256 is `e82181727bb69bf0cae6edc215b4b3f432dc497e4afd32c7936b189931efd0a9`. The [ZIP manifest](releases/0.2.2/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
 
 ```sh
 npm ci --ignore-scripts
@@ -37,7 +39,7 @@ For Claude Desktop's manual local configuration, add this to `claude_desktop_con
   "mcpServers": {
     "therundown-data": {
       "command": "/absolute/path/to/node",
-      "args": ["/absolute/path/to/therundown-data-mcp-0.2.1/server.mjs"],
+      "args": ["/absolute/path/to/therundown-data-mcp-0.2.2/server.mjs"],
       "env": { "THERUNDOWN_API_KEY": "YOUR_API_KEY" }
     }
   }
@@ -52,7 +54,7 @@ For Cursor, use the global `~/.cursor/mcp.json` and make the key available in th
     "therundown-data": {
       "type": "stdio",
       "command": "/absolute/path/to/node",
-      "args": ["/absolute/path/to/therundown-data-mcp-0.2.1/server.mjs"],
+      "args": ["/absolute/path/to/therundown-data-mcp-0.2.2/server.mjs"],
       "env": { "THERUNDOWN_API_KEY": "${env:THERUNDOWN_API_KEY}" }
     }
   }
@@ -93,7 +95,7 @@ With an eligible key, `THERUNDOWN_SMOKE_LIVE=1 npm run smoke` also requests live
 
 Usage, API plan delays, and entitlements apply to every request. Catalog, date-market, event, and main-line pages paginate locally, so each page refetches a snapshot and is separately metered. `list_futures` uses the API's upstream opaque cursor and page limit; each cursor page is still a metered request and is only a partial competition listing when `has_more` is true. Results expose safe source URLs, retrieval timestamps, API usage headers, and per-price `updated_at`; a retrieval timestamp is not evidence that a price is fresh.
 
-## Agent brief and errors in 0.2.1
+## Agent brief and errors (since 0.2.1)
 
 Read `therundown://brief` through MCP resources for the current Build with AI
 rules and first conversation. Initialization returns the same instructions;

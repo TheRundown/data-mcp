@@ -42,6 +42,6 @@ market, or exchange prices into best-price, consensus, edge, or value
 calculations.
 
 Read `therundown://brief` for the same rules and the first-conversation prompt
-in MCP clients. The 0.2.1 source exposes this resource without a Product API
+in MCP clients. Since 0.2.1, the source exposes this resource without a Product API
 request. Treat `null` error details as unknown. Keep an empty result's request
 scope and distinguish an out-of-range page from an empty slate.

@@ -1,6 +1,6 @@
 # Data MCP design and release criteria
 
-Status: local source 0.2.1, September 9, 2026. Owner: TheRundown.
+Status: local source 0.2.2, September 11, 2026. Owner: TheRundown.
 
 ## Scope
 
