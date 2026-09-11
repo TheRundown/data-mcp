@@ -20,6 +20,7 @@
         "THERUNDOWN_API_KEY": {
           "type": "string",
           "minLength": 1,
+          "pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$",
           "description": "Your TheRundown Product API key. The server sends it only in the X-TheRundown-Key header and never accepts it as a tool argument."
         }
       },
