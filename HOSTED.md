@@ -3,8 +3,9 @@
 `hosted.mjs` is the Streamable HTTP adapter for the same six read-only tools
 exported by `server.mjs`. It is deployed and publicly reachable at
 `https://mcp.therundown.io/mcp` (Streamable HTTP, `POST`). The local stdio MCP
-remains available as a separate, air-gapped install for operators who prefer
-not to depend on a hosted endpoint.
+remains available as a separate install for operators who prefer not to depend
+on a hosted endpoint. It still makes HTTPS Product API calls with the operator's
+key, so it is not an offline or air-gapped option.
 
 An operator must set a concrete public origin and run it behind an HTTPS
 terminating proxy that preserves the matching `Host` header. The adapter accepts
