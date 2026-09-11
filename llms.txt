@@ -15,7 +15,7 @@ The separate documentation MCP is https://docs.therundown.io/mcp and searches do
 Documentation MCP configuration: https://github.com/TheRundown/documentation-mcp
 
 Run from a checked-out source tree with Node.js 22+ using `npm ci --ignore-scripts`
-followed by `npm test`, or download the versioned 0.2.1 ZIP from the setup guide.
+followed by `npm test`, or download the versioned 0.2.2 ZIP from the setup guide.
 The downloadable release is local stdio only. The hosted, authenticated
 Streamable HTTP endpoint at https://mcp.therundown.io/mcp is available
 separately; there is still no published npm package.
@@ -31,7 +31,7 @@ The local tool summaries return canonical identities. Read public
 source_id and affiliate_source_ids mappings through the documented Product API
 when needed; these mapping fields are not part of the local tool summaries.
 
-The checked-out 0.2.1 source adds therundown://brief, shared first-conversation
+Since 0.2.1, the source adds therundown://brief, shared first-conversation
 instructions, and scoped empty/error explanations. Read the resource without
 an API call. Unknown plan, entitlement, retry, or remaining-point details stay
-null. The published 0.2.1 ZIP contains only the local stdio server.
+null. The published 0.2.2 ZIP contains only the local stdio server.

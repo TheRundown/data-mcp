@@ -307,7 +307,7 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
     throw new Error('Set THERUNDOWN_API_KEY in the MCP process environment.');
   }
   apiKey = apiKey.trim();
-  const server = new McpServer({ name: 'therundown-data', version: '0.2.1' }, {
+  const server = new McpServer({ name: 'therundown-data', version: '0.2.2' }, {
     instructions: AGENT_BRIEF,
   });
   server.registerResource('brief', 'therundown://brief', {
