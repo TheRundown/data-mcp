@@ -18,7 +18,7 @@ The checked-out source is version **0.2.2**. It ships the same local runtime as
 structured error and empty result explanations. The published source ZIP contains
 the same local runtime.
 
-Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.1.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.1.sha256), and extract it. The official ZIP SHA-256 is `71b7339d9f329262e6ff0279ab2ee185c9a06f05f62671b0ec55ac7678a36e74`. The [ZIP manifest](releases/0.2.1/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
+Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.2.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.2.sha256), and extract it. The official ZIP SHA-256 is `e82181727bb69bf0cae6edc215b4b3f432dc497e4afd32c7936b189931efd0a9`. The [ZIP manifest](releases/0.2.2/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
 
 ```sh
 npm ci --ignore-scripts
