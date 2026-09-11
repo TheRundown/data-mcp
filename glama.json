@@ -2,5 +2,42 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": [
     "fjordan"
+  ],
+  "name": "therundown-data",
+  "title": "TheRundown Data MCP",
+  "description": "Official read-only MCP server for TheRundown's sports odds Product API. Six tools list sports, affiliates, markets, events, open main-line odds, and futures, plus a therundown://brief resource. Runs locally over stdio with your own API key; the same tools are hosted at https://mcp.therundown.io/mcp.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheRundown/data-mcp"
+  },
+  "homepage": "https://docs.therundown.io/data-mcp",
+  "transport": "stdio",
+  "dockerfile": "glama/Dockerfile",
+  "environmentVariables": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "THERUNDOWN_API_KEY": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$",
+          "description": "Your TheRundown Product API key. The server sends it only in the X-TheRundown-Key header and never accepts it as a tool argument."
+        }
+      },
+      "required": [
+        "THERUNDOWN_API_KEY"
+      ],
+      "additionalProperties": false
+    },
+    "placeholderArguments": [
+      "THERUNDOWN_API_KEY"
+    ]
+  },
+  "tags": [
+    "mcp",
+    "model-context-protocol",
+    "sports-data",
+    "sports-odds",
+    "therundown"
   ]
 }
