@@ -24,8 +24,10 @@ node hosted.mjs
 The public origin must be a bare HTTPS origin (HTTP is accepted only for
 loopback test origins). There is no wildcard CORS policy, no query credentials,
 no proxy configuration, no alternate API host, and no stored session or customer
-credential store. Responses are `Cache-Control: no-store`. Send exactly one Product
-API key on every request:
+credential store. Responses are `Cache-Control: no-store`. Initialization, the
+initialized notification, tool and resource listing, and reads of the exact
+`therundown://brief` resource may omit credentials and never call the Product API.
+For every Product tool call, send exactly one Product API key:
 
 ```http
 X-TheRundown-Key: YOUR_PRODUCT_API_KEY
@@ -37,8 +39,10 @@ or
 Authorization: Bearer YOUR_PRODUCT_API_KEY
 ```
 
-Never send a key in a URL. The adapter rejects missing, malformed, duplicate,
-or ambiguous credential headers, including requests that send both forms.
+Never send a key in a URL. The adapter rejects missing credentials on protected
+methods and malformed, duplicate, or ambiguous credential headers on every
+method, including requests that send both forms. Anonymous requests for any
+method or resource outside the narrow metadata allowlist return `401`.
 
 Each key has one active HTTP request at a time. The process has a hard cap of
 16 active requests by default, configurable with `THERUNDOWN_MCP_MAX_CONCURRENT`
@@ -60,7 +64,9 @@ up. Credentials and bodies are not logged.
 
 Product API authentication, entitlements, data-point usage, rate limiting, and
 tool results remain the authority of `createDataServer` and the Product API.
-Discovering tools does not validate a key or establish any entitlement.
+Discovering tools does not validate a key or establish any entitlement. All
+anonymous discovery requests share one per-process concurrency identity and
+remain subject to the process and request limits above.
 
 This adapter uses explicitly configured Product API keys, not OAuth access
 tokens. It does not advertise OAuth discovery or automatic account linking.

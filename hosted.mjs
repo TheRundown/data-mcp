@@ -91,6 +91,24 @@ function credentialFrom(req) {
   return key;
 }
 
+function hasCredentialInput(req) {
+  return hasAnyHeader(req, 'x-therundown-key') || hasAnyHeader(req, 'authorization')
+    || req.rawHeaders.some((_, index) => index % 2 === 0
+      && CREDENTIAL_ALIASES.has(req.rawHeaders[index].toLowerCase()));
+}
+
+// Metadata discovery is deliberately narrow: it can tell a client what this
+// server is and how to use it, but can never reach the Product API. Every
+// other JSON-RPC method still needs a Product credential at the HTTP boundary.
+function isAnonymousDiscoveryRequest(body) {
+  if (body.jsonrpc !== '2.0' || typeof body.method !== 'string') return false;
+  if (body.method === 'initialize' || body.method === 'notifications/initialized'
+    || body.method === 'tools/list' || body.method === 'resources/list') return true;
+  return body.method === 'resources/read'
+    && body.params && typeof body.params === 'object' && !Array.isArray(body.params)
+    && body.params.uri === 'therundown://brief';
+}
+
 function acceptsJson(req) {
   const value = req.headers['content-type'];
   if (Array.isArray(value) || typeof value !== 'string') return false;
@@ -281,13 +299,33 @@ export function createHostedServer({
       jsonError(res, 415, 'Content-Type must be application/json.');
       return;
     }
+    const requestDeadline = Date.now() + timeoutMs;
+    const bodyController = new AbortController();
+    const bodyTimer = setTimeout(() => bodyController.abort(), timeoutMs);
+    let body;
+    try {
+      body = await readJsonBody(req, bodyController.signal);
+    } catch (error) {
+      const status = error?.code === 'body_too_large' ? 413
+        : error?.code === 'invalid_json' || error?.code === 'invalid_jsonrpc' ? 400
+        : error?.code === 'request_aborted' ? 408 : 400;
+      const message = status === 413 ? 'Request body exceeds 64 KiB.'
+        : error?.code === 'invalid_json' ? 'Request body must contain valid JSON.'
+        : status === 408 ? 'Request timed out or was cancelled.'
+        : 'Request must contain one JSON-RPC object.';
+      jsonError(res, status, message);
+      return;
+    } finally {
+      clearTimeout(bodyTimer);
+    }
     const apiKey = credentialFrom(req);
-    if (!apiKey) {
+    const anonymousDiscovery = !apiKey && !hasCredentialInput(req) && isAnonymousDiscoveryRequest(body);
+    if (!apiKey && !anonymousDiscovery) {
       jsonError(res, 401, 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.');
       return;
     }
     // The active map is bounded by the process cap and contains only digests.
-    const keyDigest = createHash('sha256').update(apiKey).digest('base64url');
+    const keyDigest = createHash('sha256').update(apiKey ?? 'anonymous-discovery').digest('base64url');
     if (activeTotal >= concurrencyCap || activeByKey.has(keyDigest)) {
       jsonError(res, 429, 'Request capacity is busy. Retry after one second.', { 'retry-after': '1' });
       return;
@@ -297,7 +335,7 @@ export function createHostedServer({
 
     const controller = new AbortController();
     const abort = () => controller.abort();
-    const timer = setTimeout(abort, timeoutMs);
+    const timer = setTimeout(abort, Math.max(1, requestDeadline - Date.now()));
     const pendingFetches = new Set();
     const trackedFetch = (url, init = {}) => {
       const request = Promise.resolve().then(async () => {
@@ -323,7 +361,6 @@ export function createHostedServer({
     });
 
     try {
-      const body = await readJsonBody(req, controller.signal);
       if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
       const server = createDataServer({ apiKey, fetchImpl: trackedFetch });
       const transport = new StreamableHTTPServerTransport({

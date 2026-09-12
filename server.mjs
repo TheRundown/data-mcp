@@ -90,6 +90,155 @@ const futureFilters = {
   affiliate_ids: filters.affiliate_ids,
 };
 
+// Tool output remains JSON text for clients that only render content, while
+// structuredContent gives modern MCP clients a contract they can validate.
+const canonicalIdOutput = z.number().int().positive().max(2147483647);
+const periodIdOutput = z.number().int().nonnegative();
+const publicScalarOutput = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const usageOutput = z.record(z.string(), z.string());
+const emptyOutput = z.object({
+  code: z.enum(['page_out_of_range', 'no_results']),
+  message: z.string(),
+  scope: z.object({}).passthrough(),
+}).strict();
+const errorOutput = {
+  error: z.string().optional(),
+  message: z.string().optional(),
+  status: z.number().int().optional(),
+  plan: z.string().nullable().optional(),
+  missing_entitlement: z.string().nullable().optional(),
+  required_plan: z.string().nullable().optional(),
+  retry_after: z.number().int().nonnegative().nullable().optional(),
+  remaining_points: z.number().int().nonnegative().nullable().optional(),
+  monthly_remaining_points: z.number().int().nonnegative().nullable().optional(),
+  limit_reason: z.string().nullable().optional(),
+  usage: usageOutput.optional(),
+  source_url: z.string().url().optional(),
+  retrieved_at: z.string().optional(),
+  event_id: z.string().optional(),
+};
+const pageOutput = (item) => ({
+  items: z.array(item),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  limit: z.number().int().positive(),
+  next_page: z.number().int().positive().nullable(),
+});
+const sportOutput = z.object({
+  sport_id: canonicalIdOutput.optional(),
+  sport_name: z.string().optional(),
+}).strict();
+const affiliateOutput = z.object({
+  affiliate_id: canonicalIdOutput.optional(),
+  affiliate_name: z.string().optional(),
+}).strict();
+const marketOutput = z.object({
+  id: canonicalIdOutput.optional(),
+  name: z.string().optional(),
+  description: z.string().nullable().optional(),
+  period_id: periodIdOutput.optional(),
+  live: z.boolean().nullable().optional(),
+  live_variant_id: canonicalIdOutput.nullable().optional(),
+  sports: z.array(canonicalIdOutput).optional(),
+}).strict();
+const teamOutput = z.object({
+  team_id: canonicalIdOutput.optional(),
+  name: z.string().optional(),
+  mascot: z.string().optional(),
+  is_home: z.boolean().optional(),
+  is_away: z.boolean().nullable().optional(),
+}).strict();
+const scoreOutput = z.object({
+  event_status: publicScalarOutput.optional(),
+  score_away: publicScalarOutput.optional(),
+  score_home: publicScalarOutput.optional(),
+  game_clock: publicScalarOutput.optional(),
+  display_clock: publicScalarOutput.optional(),
+  game_period: publicScalarOutput.optional(),
+  event_status_detail: publicScalarOutput.optional(),
+  updated_at: publicScalarOutput.optional(),
+}).strict();
+const eventOutput = z.object({
+  event_id: z.string().optional(),
+  sport_id: canonicalIdOutput.optional(),
+  event_date: z.string().optional(),
+  score: scoreOutput.nullable().optional(),
+  teams: z.array(teamOutput),
+  market_ids: z.array(canonicalIdOutput),
+}).strict();
+const participantOutput = z.object({
+  id: publicScalarOutput.optional(),
+  type: z.string().optional(),
+  name: z.string().optional(),
+}).strict();
+const mainLineOutput = z.object({
+  market_id: canonicalIdOutput.optional(),
+  market_name: z.string().optional(),
+  period_id: periodIdOutput.optional(),
+  participant: participantOutput,
+  line_id: publicScalarOutput.optional(),
+  line_value: publicScalarOutput,
+  affiliate_id: canonicalIdOutput,
+  price: z.number(),
+  is_main_line: z.literal(true),
+  updated_at: z.string().optional(),
+}).strict();
+const futureScheduleOutput = z.object({
+  event_name: z.string().optional(),
+  league_name: z.string().optional(),
+  season_year: publicScalarOutput.optional(),
+}).strict();
+const futureSettlementOutput = z.object({
+  status: publicScalarOutput.optional(),
+  settled_at: publicScalarOutput.optional(),
+  winning_line: publicScalarOutput.optional(),
+  winning_participant_id: publicScalarOutput.optional(),
+}).strict();
+const futureEventOutput = z.object({
+  event_id: z.string().optional(),
+  sport_id: canonicalIdOutput.optional(),
+  event_date: z.string().optional(),
+  settle_by: z.string().optional(),
+  event_status: publicScalarOutput.optional(),
+  schedule: futureScheduleOutput.optional(),
+  settlement: z.record(z.string(), futureSettlementOutput).optional(),
+  market_ids: z.array(canonicalIdOutput),
+  main_lines: z.array(mainLineOutput.omit({ line_id: true })),
+}).strict();
+const futureMetaOutput = z.object({
+  count: publicScalarOutput.optional(),
+  total: publicScalarOutput.optional(),
+  has_more: publicScalarOutput.optional(),
+  next_cursor: publicScalarOutput.optional(),
+}).strict();
+const outputSchema = (data) => z.object({
+  source_url: z.string().url().optional(),
+  retrieved_at: z.string().optional(),
+  usage: usageOutput.optional(),
+  data: data.optional(),
+  empty: emptyOutput.optional(),
+  ...errorOutput,
+}).strict();
+const toolOutputs = {
+  list_sports: outputSchema(z.object({ sports: z.array(sportOutput) }).strict()),
+  list_affiliates: outputSchema(z.object({ affiliates: z.array(affiliateOutput) }).strict()),
+  list_markets: outputSchema(z.object(pageOutput(marketOutput)).strict()),
+  list_events: outputSchema(z.object(pageOutput(eventOutput)).strict()),
+  get_main_lines: outputSchema(z.object({ event: eventOutput, ...pageOutput(mainLineOutput) }).strict()),
+  list_futures: outputSchema(z.object({
+    events: z.array(futureEventOutput),
+    meta: futureMetaOutput,
+  }).strict()),
+};
+const TOOL_TITLES = {
+  list_sports: 'List sports',
+  list_affiliates: 'List affiliates',
+  list_markets: 'List markets',
+  list_events: 'List events',
+  get_main_lines: 'Get main lines',
+  list_futures: 'List futures',
+};
+
 const isPublicScalar = (value) => value === null || typeof value === 'string'
   || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value));
 const isCanonicalId = (value) => Number.isInteger(value) && value > 0 && value <= 2147483647;
@@ -302,12 +451,14 @@ async function readBoundedJson(response, maxBytes = MAX_RESPONSE_BYTES) {
 
 // Dependency injection is for offline tests. The executable always uses the
 // fixed HTTPS origin and reads its key only from the process environment.
+// A key is not required to inspect the server's public MCP metadata. Product
+// calls themselves fail before any network activity when it is absent.
 export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetchImpl = fetch, timeoutMs = 15000 } = {}) {
-  if (!apiKey?.trim() || /[\r\n]/.test(apiKey)) {
+  if (apiKey !== undefined && apiKey !== null && (typeof apiKey !== 'string' || /[\r\n]/.test(apiKey))) {
     throw new Error('Set THERUNDOWN_API_KEY in the MCP process environment.');
   }
-  apiKey = apiKey.trim();
-  const server = new McpServer({ name: 'therundown-data', version: '0.2.2' }, {
+  apiKey = typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : undefined;
+  const server = new McpServer({ name: 'therundown-data', version: '0.2.3' }, {
     instructions: AGENT_BRIEF,
   });
   server.registerResource('brief', 'therundown://brief', {
@@ -316,20 +467,20 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
     mimeType: 'text/markdown',
   }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: 'text/markdown', text: AGENT_BRIEF }] }));
   let active = false;
-  const encodedKey = encodeURIComponent(apiKey);
+  const encodedKey = apiKey ? encodeURIComponent(apiKey) : null;
   const percentEncodingPattern = (value) => new RegExp(value.split(/(%[0-9A-F]{2})/).map((part) => {
     if (/^%[0-9A-F]{2}$/.test(part)) {
       return `%[${part[1].toLowerCase()}${part[1].toUpperCase()}][${part[2].toLowerCase()}${part[2].toUpperCase()}]`;
     }
     return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }).join(''), 'g');
-  const encodedKeyPatterns = [
+  const encodedKeyPatterns = encodedKey ? [
     percentEncodingPattern(encodedKey),
     percentEncodingPattern(encodedKey.replaceAll('%20', '+')),
-  ];
+  ] : [];
   const redactText = (value) => encodedKeyPatterns.reduce(
     (redacted, pattern) => redacted.replaceAll(pattern, '[REDACTED]'),
-    value.replaceAll(apiKey, '[REDACTED]'),
+    apiKey ? value.replaceAll(apiKey, '[REDACTED]') : value,
   );
   const redact = (value) => {
     if (typeof value === 'string') return redactText(value);
@@ -344,6 +495,9 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
   const serialize = (value) => JSON.stringify(redact(value));
 
   async function request(path, query, signal) {
+    if (!apiKey) {
+      throw new ApiError('missing_credentials', 'Configure a Product API key before calling this tool.');
+    }
     if (active) throw new ApiError('busy', 'One API request is already active. Wait for it to finish.');
     active = true;
     const url = new URL(`${API_BASE}${path}`);
@@ -384,8 +538,10 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
 
   function tool(name, description, inputSchema, handler) {
     server.registerTool(name, {
+      title: TOOL_TITLES[name],
       description,
       inputSchema: z.object(inputSchema).strict(),
+      outputSchema: toolOutputs[name],
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     }, async (args, extra) => {
       try {
@@ -559,7 +715,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   } catch {
     // stdout is reserved for MCP protocol traffic. Never print errors carrying
     // credentials or raw upstream bodies to either output stream.
-    process.stderr.write('Unable to start TheRundown data MCP. Use Node 22+ and set THERUNDOWN_API_KEY.\n');
+    process.stderr.write('Unable to start TheRundown data MCP. Use Node 22+ and check THERUNDOWN_API_KEY.\n');
     process.exitCode = 1;
   }
 }

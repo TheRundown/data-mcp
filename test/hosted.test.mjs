@@ -58,6 +58,14 @@ async function post(origin, { key = KEY_A, authorization, path = '/mcp', body = 
   });
 }
 
+async function postAnonymous(origin, { path = '/mcp', body = REQUEST, headers = {} } = {}) {
+  return fetch(`${origin}${path}`, {
+    method: 'POST',
+    headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json', ...headers },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
+}
+
 async function rawPost(origin, headers, body = REQUEST) {
   return rawRequest(origin, { headers, body }).then(({ status }) => status);
 }
@@ -84,6 +92,13 @@ async function clientFor(origin, key) {
     requestInit: { headers: { 'X-TheRundown-Key': key } },
   });
   const client = new Client({ name: 'hosted-integration-test', version: '1.0.0' }, { capabilities: {} });
+  await client.connect(transport);
+  return { client, transport };
+}
+
+async function anonymousClientFor(origin) {
+  const transport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`));
+  const client = new Client({ name: 'anonymous-hosted-test', version: '1.0.0' }, { capabilities: {} });
   await client.connect(transport);
   return { client, transport };
 }
@@ -151,6 +166,47 @@ test('actual Streamable HTTP client inherits exactly six tools and the brief res
   }
 });
 
+test('anonymous discovery permits only public metadata and never calls the Product API', async () => {
+  let reads = 0;
+  const service = await hosted(async () => {
+    reads += 1;
+    return response({ sports: [] });
+  });
+  const toolsList = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
+  const resourcesList = { jsonrpc: '2.0', id: 3, method: 'resources/list', params: {} };
+  const briefRead = { jsonrpc: '2.0', id: 4, method: 'resources/read', params: { uri: 'therundown://brief' } };
+  try {
+    for (const body of [REQUEST, toolsList, resourcesList, briefRead, {
+      jsonrpc: '2.0', method: 'notifications/initialized', params: {},
+    }]) {
+      const result = await postAnonymous(service.origin, { body });
+      assert.ok([200, 202].includes(result.status), `expected metadata request to succeed, got ${result.status}`);
+    }
+    const connection = await anonymousClientFor(service.origin);
+    try {
+      assert.deepEqual(connection.client.getServerVersion(), { name: 'therundown-data', version: '0.2.3' });
+      assert.equal((await connection.client.listTools()).tools.length, 6);
+      assert.equal((await connection.client.listResources()).resources[0].uri, 'therundown://brief');
+      assert.equal((await connection.client.readResource({ uri: 'therundown://brief' })).contents[0].mimeType, 'text/markdown');
+    } finally {
+      await closeClient(connection);
+    }
+    assert.equal((await postAnonymous(service.origin, { body: callSports() })).status, 401);
+    assert.equal((await postAnonymous(service.origin, {
+      body: { jsonrpc: '2.0', id: 5, method: 'resources/read', params: { uri: 'therundown://other' } },
+    })).status, 401);
+    assert.equal((await postAnonymous(service.origin, {
+      body: { jsonrpc: '2.0', id: 6, method: 'ping', params: {} },
+    })).status, 401);
+    assert.equal((await postAnonymous(service.origin, {
+      body: REQUEST, headers: { Authorization: 'Basic synthetic' },
+    })).status, 401);
+    assert.equal(reads, 0);
+  } finally {
+    await service.close();
+  }
+});
+
 test('accepts either supported credential form and keeps upstream tenant credentials separate', async () => {
   const received = [];
   const service = await hosted(async (_url, options) => {
@@ -169,17 +225,15 @@ test('accepts either supported credential form and keeps upstream tenant credent
   }
 });
 
-test('rejects absent, malformed, duplicated, ambiguous, and query-string credentials before MCP handling', async () => {
+test('rejects malformed, duplicated, ambiguous, and query-string credentials on protected requests', async () => {
   let reads = 0;
   const service = await hosted(async () => { reads += 1; return response({ sports: [] }); });
   try {
-    const absent = await fetch(`${service.origin}/mcp`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(REQUEST),
-    });
-    assert.equal(absent.status, 401);
-    assert.equal((await post(service.origin, { key: undefined, authorization: 'Basic synthetic' })).status, 401);
+    assert.equal((await post(service.origin, {
+      key: undefined, authorization: 'Basic synthetic', body: callSports(),
+    })).status, 401);
     const ambiguous = await post(service.origin, {
-      headers: { Authorization: `Bearer ${KEY_B}` },
+      headers: { Authorization: `Bearer ${KEY_B}` }, body: callSports(),
     });
     assert.equal(ambiguous.status, 401);
     for (const key of [`${KEY_A},${KEY_B}`, `${KEY_A}, ${KEY_B}`, `${KEY_A} ${KEY_B}`]) {

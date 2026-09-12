@@ -1,6 +1,4 @@
 import assert from 'node:assert/strict';
-import { once } from 'node:events';
-import { spawn } from 'node:child_process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -151,10 +149,25 @@ test('SDK discovery lists all tools and preserves usage metadata', async () => {
       headers: { 'X-Datapoints': '0', 'X-Data-Delay-Seconds': '0' },
     });
   }, async (client) => {
+    assert.deepEqual(client.getServerVersion(), { name: 'therundown-data', version: '0.2.3' });
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map((tool) => tool.name), [
       'list_sports', 'list_affiliates', 'list_markets', 'list_events', 'get_main_lines', 'list_futures',
     ]);
+    assert.deepEqual(tools.tools.map((tool) => tool.title), [
+      'List sports', 'List affiliates', 'List markets', 'List events', 'Get main lines', 'List futures',
+    ]);
+    for (const tool of tools.tools) {
+      assert.equal(tool.outputSchema.type, 'object');
+      assert.equal(tool.outputSchema.additionalProperties, false);
+      assert.ok(tool.outputSchema.properties.data);
+      assert.ok(tool.outputSchema.properties.error);
+    }
+    const schemaByName = Object.fromEntries(tools.tools.map((tool) => [tool.name, tool.outputSchema]));
+    assert.ok(schemaByName.list_sports.properties.data.properties.sports.items.properties.sport_id);
+    assert.ok(schemaByName.list_events.properties.data.properties.items.items.properties.event_id);
+    assert.ok(schemaByName.get_main_lines.properties.data.properties.items.items.properties.affiliate_id);
+    assert.ok(schemaByName.list_futures.properties.data.properties.events.items.properties.main_lines);
     const result = await client.callTool({ name: 'list_sports', arguments: {} });
     const value = jsonResult(result);
     assert.deepEqual(value.data.sports, [{ sport_id: 3, sport_name: 'MLB' }]);
@@ -164,6 +177,34 @@ test('SDK discovery lists all tools and preserves usage metadata', async () => {
     assert.ok(value.retrieved_at);
   });
   assert.equal(calls, 1);
+});
+
+test('keyless discovery exposes the brief and tool contracts without an upstream call', async () => {
+  let calls = 0;
+  await withServer(async () => {
+    calls += 1;
+    throw new Error('No Product API request expected');
+  }, async (client) => {
+    const tools = await client.listTools();
+    assert.equal(tools.tools.length, 6);
+    assert.equal(tools.tools.every((tool) => tool.outputSchema?.type === 'object'), true);
+    const resources = await client.listResources();
+    assert.deepEqual(resources.resources.map(({ uri }) => uri), ['therundown://brief']);
+    const brief = await client.readResource({ uri: 'therundown://brief' });
+    assert.equal(brief.contents[0].text, AGENT_BRIEF);
+    const result = await client.callTool({ name: 'list_sports', arguments: {} });
+    assert.equal(result.isError, true);
+    assert.deepEqual(jsonResult(result), {
+      error: 'missing_credentials',
+      message: 'Configure a Product API key before calling this tool.',
+    });
+  }, { apiKey: ' ' });
+  assert.equal(calls, 0);
+});
+
+test('keys containing newlines are rejected at construction', () => {
+  assert.throws(() => createDataServer({ apiKey: 'synthetic\nkey' }), /Set THERUNDOWN_API_KEY/);
+  assert.throws(() => createDataServer({ apiKey: 'synthetic\rkey' }), /Set THERUNDOWN_API_KEY/);
 });
 
 test('list_affiliates excludes retired affiliate 27', async () => {
@@ -762,19 +803,22 @@ test('stdio initialize and list_tools do not call upstream', async () => {
   await client.close();
 });
 
-test('stdio startup without a key fails with bounded sanitized stderr', async () => {
-  const child = spawn(NODE22, ['server.mjs'], {
+test('stdio remains available for discovery without a key', async () => {
+  const transport = new StdioClientTransport({
+    command: NODE22,
+    args: ['server.mjs'],
     cwd: EXAMPLE_DIR,
     env: { PATH: process.env.PATH },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stderr: 'pipe',
   });
-  let stderr = '';
-  child.stderr.setEncoding('utf8');
-  child.stderr.on('data', (chunk) => { stderr += chunk; });
-  const [code] = await once(child, 'close');
-  assert.equal(code, 1);
-  assert.match(stderr, /Unable to start TheRundown data MCP/);
-  assert.equal(stderr.includes('THERUNDOWN_API_KEY'), true);
-  assert.equal(stderr.includes(KEY), false);
-  assert.equal(stderr.length < 500, true);
+  const client = new Client({ name: 'stdio-keyless-test-client', version: '1.0.0' }, { capabilities: {} });
+  await client.connect(transport);
+  try {
+    assert.equal((await client.listTools()).tools.length, 6);
+    const result = await client.callTool({ name: 'list_sports', arguments: {} });
+    assert.equal(result.isError, true);
+    assert.match(textResult(result), /missing_credentials/);
+  } finally {
+    await client.close();
+  }
 });
