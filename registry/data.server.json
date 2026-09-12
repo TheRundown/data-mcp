@@ -3,7 +3,7 @@
   "name": "io.github.TheRundown/data",
   "title": "TheRundown Data MCP",
   "description": "Read-only TheRundown sports odds/events via six authenticated Product API tools; API key required.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "repository": {
     "url": "https://github.com/TheRundown/data-mcp",
     "source": "github"
