@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.TheRundown/data",
   "title": "TheRundown Data MCP",
-  "description": "Six Product API tools require authentication; metadata discovery is keyless.",
+  "description": "Six Product API tools require authentication; protocol metadata discovery is keyless.",
   "version": "0.2.3",
   "repository": {
     "url": "https://github.com/TheRundown/data-mcp",
