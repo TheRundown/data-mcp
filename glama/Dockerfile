@@ -4,9 +4,9 @@
 # file must not replace it. Build context is the repository root:
 #   docker build -f glama/Dockerfile .
 #
-# The server exits at startup unless THERUNDOWN_API_KEY is non-empty. Any
-# non-empty value is enough for initialize, tools/list and resources/list,
-# which make no Product API call; tool calls need a real key.
+# The server starts without THERUNDOWN_API_KEY so Glama can inspect its
+# metadata. Product API tool calls return a missing_credentials error until a
+# real key is configured.
 FROM node:22.23.2-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
 
 # Consume signed security updates from the pinned Alpine release branch.

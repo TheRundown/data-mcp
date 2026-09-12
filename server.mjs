@@ -125,27 +125,27 @@ const pageOutput = (item) => ({
   next_page: z.number().int().positive().nullable(),
 });
 const sportOutput = z.object({
-  sport_id: canonicalIdOutput.optional(),
-  sport_name: z.string().optional(),
+  sport_id: canonicalIdOutput.nullable().optional(),
+  sport_name: z.string().nullable().optional(),
 }).strict();
 const affiliateOutput = z.object({
   affiliate_id: canonicalIdOutput.optional(),
-  affiliate_name: z.string().optional(),
+  affiliate_name: z.string().nullable().optional(),
 }).strict();
 const marketOutput = z.object({
-  id: canonicalIdOutput.optional(),
-  name: z.string().optional(),
+  id: canonicalIdOutput.nullable().optional(),
+  name: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  period_id: periodIdOutput.optional(),
+  period_id: periodIdOutput.nullable().optional(),
   live: z.boolean().nullable().optional(),
   live_variant_id: canonicalIdOutput.nullable().optional(),
   sports: z.array(canonicalIdOutput).optional(),
 }).strict();
 const teamOutput = z.object({
-  team_id: canonicalIdOutput.optional(),
-  name: z.string().optional(),
-  mascot: z.string().optional(),
-  is_home: z.boolean().optional(),
+  team_id: canonicalIdOutput.nullable().optional(),
+  name: z.string().nullable().optional(),
+  mascot: z.string().nullable().optional(),
+  is_home: z.boolean().nullable().optional(),
   is_away: z.boolean().nullable().optional(),
 }).strict();
 const scoreOutput = z.object({
@@ -159,33 +159,33 @@ const scoreOutput = z.object({
   updated_at: publicScalarOutput.optional(),
 }).strict();
 const eventOutput = z.object({
-  event_id: z.string().optional(),
-  sport_id: canonicalIdOutput.optional(),
-  event_date: z.string().optional(),
+  event_id: z.string().nullable().optional(),
+  sport_id: canonicalIdOutput.nullable().optional(),
+  event_date: z.string().nullable().optional(),
   score: scoreOutput.nullable().optional(),
   teams: z.array(teamOutput),
   market_ids: z.array(canonicalIdOutput),
 }).strict();
 const participantOutput = z.object({
   id: publicScalarOutput.optional(),
-  type: z.string().optional(),
-  name: z.string().optional(),
+  type: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
 }).strict();
 const mainLineOutput = z.object({
   market_id: canonicalIdOutput.optional(),
-  market_name: z.string().optional(),
-  period_id: periodIdOutput.optional(),
+  market_name: z.string().nullable().optional(),
+  period_id: periodIdOutput.nullable().optional(),
   participant: participantOutput,
   line_id: publicScalarOutput.optional(),
   line_value: publicScalarOutput,
   affiliate_id: canonicalIdOutput,
   price: z.number(),
   is_main_line: z.literal(true),
-  updated_at: z.string().optional(),
+  updated_at: z.string().nullable().optional(),
 }).strict();
 const futureScheduleOutput = z.object({
-  event_name: z.string().optional(),
-  league_name: z.string().optional(),
+  event_name: z.string().nullable().optional(),
+  league_name: z.string().nullable().optional(),
   season_year: publicScalarOutput.optional(),
 }).strict();
 const futureSettlementOutput = z.object({
@@ -195,10 +195,10 @@ const futureSettlementOutput = z.object({
   winning_participant_id: publicScalarOutput.optional(),
 }).strict();
 const futureEventOutput = z.object({
-  event_id: z.string().optional(),
+  event_id: z.string().nullable().optional(),
   sport_id: canonicalIdOutput.optional(),
-  event_date: z.string().optional(),
-  settle_by: z.string().optional(),
+  event_date: z.string().nullable().optional(),
+  settle_by: z.string().nullable().optional(),
   event_status: publicScalarOutput.optional(),
   schedule: futureScheduleOutput.optional(),
   settlement: z.record(z.string(), futureSettlementOutput).optional(),
@@ -242,8 +242,9 @@ const TOOL_TITLES = {
 const isPublicScalar = (value) => value === null || typeof value === 'string'
   || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value));
 const isCanonicalId = (value) => Number.isInteger(value) && value > 0 && value <= 2147483647;
-const pick = (value, keys) => Object.fromEntries(
-  keys.filter((key) => isPublicScalar(value?.[key])).map((key) => [key, value[key]]),
+const pick = (value, keys, shape) => Object.fromEntries(
+  keys.filter((key) => isPublicScalar(value?.[key]) && shape[key].safeParse(value[key]).success)
+    .map((key) => [key, value[key]]),
 );
 const publicIdArray = (value) => Array.isArray(value) ? value.filter(isCanonicalId) : undefined;
 
@@ -374,13 +375,13 @@ function eventSummary(event) {
     ? pick(event.score, [
       'event_status', 'score_away', 'score_home', 'game_clock', 'display_clock',
       'game_period', 'event_status_detail', 'updated_at',
-    ])
+    ], scoreOutput.shape)
     : undefined;
   return {
-    ...pick(event, ['event_id', 'sport_id', 'event_date']),
+    ...pick(event, ['event_id', 'sport_id', 'event_date'], eventOutput.shape),
     ...(score === undefined ? {} : { score }),
     teams: teams.map((team) =>
-      pick(team, ['team_id', 'name', 'mascot', 'is_home', 'is_away'])),
+      pick(team, ['team_id', 'name', 'mascot', 'is_home', 'is_away'], teamOutput.shape)),
     market_ids: publicIdArray(Array.isArray(event.markets)
       ? event.markets.map((market) => market?.market_id) : []) ?? [],
   };
@@ -405,14 +406,15 @@ function mainLineRows(event, args) {
             || price.is_main_line !== true || (price.closed_at != null && price.closed_at !== '') || price.price === 0.0001 || price.price === 0
             || !Number.isFinite(price.price)) continue;
           rows.push({
-            ...pick(market, ['market_id']),
-            ...(isPublicScalar(market.name) ? { market_name: market.name } : {}),
-            ...pick(market, ['period_id']),
-            participant: pick(participant, ['id', 'type', 'name']),
+            ...pick(market, ['market_id'], mainLineOutput.shape),
+            ...(isPublicScalar(market.name) && mainLineOutput.shape.market_name.safeParse(market.name).success
+              ? { market_name: market.name } : {}),
+            ...pick(market, ['period_id'], mainLineOutput.shape),
+            participant: pick(participant, ['id', 'type', 'name'], participantOutput.shape),
             ...(isPublicScalar(line.id) ? { line_id: line.id } : {}),
             line_value: isPublicScalar(line.value) ? line.value : null,
             affiliate_id: affiliateId,
-            ...pick(price, ['price', 'is_main_line', 'updated_at']),
+            ...pick(price, ['price', 'is_main_line', 'updated_at'], mainLineOutput.shape),
           });
         }
       }
@@ -561,7 +563,7 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
 
   tool('list_sports', 'List current canonical sport IDs and names. Do not use a catalog row as evidence of current events, prices, or plan access.', {}, async (_, signal) => {
     const result = await request('/sports', {}, signal);
-    result.data = { sports: arrayAt(result.data, 'sports').map((sport) => pick(sport, ['sport_id', 'sport_name'])) };
+    result.data = { sports: arrayAt(result.data, 'sports').map((sport) => pick(sport, ['sport_id', 'sport_name'], sportOutput.shape)) };
     return withEmptyExplanation(result, result.data.sports.length, 'The sports catalog returned no rows. This does not establish current event or price coverage.');
   });
 
@@ -570,14 +572,14 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
     result.data = { affiliates: arrayAt(result.data, 'affiliates')
       .filter((affiliate) => isCanonicalId(affiliate?.affiliate_id)
         && !RETIRED_AFFILIATES.has(affiliate.affiliate_id))
-      .map((affiliate) => pick(affiliate, ['affiliate_id', 'affiliate_name'])) };
+      .map((affiliate) => pick(affiliate, ['affiliate_id', 'affiliate_name'], affiliateOutput.shape)) };
     return withEmptyExplanation(result, result.data.affiliates.length, 'The affiliates catalog returned no active canonical rows. This does not establish overall coverage or key entitlements.');
   });
 
   const marketSummary = (market) => {
     const sports = publicIdArray(market?.sports);
     return {
-      ...pick(market, ['id', 'name', 'description', 'period_id', 'live', 'live_variant_id']),
+      ...pick(market, ['id', 'name', 'description', 'period_id', 'live', 'live_variant_id'], marketOutput.shape),
       ...(sports === undefined ? {} : { sports }),
     };
   };
@@ -658,16 +660,16 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
 
   const futureEventSummary = (event, args) => {
     const schedule = event?.schedule && typeof event.schedule === 'object' && !Array.isArray(event.schedule)
-      ? pick(event.schedule, ['event_name', 'league_name', 'season_year']) : undefined;
+      ? pick(event.schedule, ['event_name', 'league_name', 'season_year'], futureScheduleOutput.shape) : undefined;
     const settlement = event?.settlement && typeof event.settlement === 'object' && !Array.isArray(event.settlement)
       ? Object.fromEntries(Object.entries(event.settlement)
         .filter(([marketId, value]) => isCanonicalId(Number(marketId)) && args.market_ids.includes(Number(marketId))
           && value && typeof value === 'object' && !Array.isArray(value))
         .map(([marketId, value]) => [marketId, pick(value, [
           'status', 'settled_at', 'winning_line', 'winning_participant_id',
-        ])])) : undefined;
+        ], futureSettlementOutput.shape)])) : undefined;
     return {
-      ...pick(event, ['event_id', 'sport_id', 'event_date', 'settle_by', 'event_status']),
+      ...pick(event, ['event_id', 'sport_id', 'event_date', 'settle_by', 'event_status'], futureEventOutput.shape),
       ...(schedule === undefined ? {} : { schedule }),
       ...(settlement === undefined ? {} : { settlement }),
       market_ids: (publicIdArray(Array.isArray(event?.markets)
@@ -698,7 +700,7 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
       throw new ApiError('invalid_response', 'The API returned a futures event outside the requested sport.');
     }
     const meta = result.data?.meta && typeof result.data.meta === 'object' && !Array.isArray(result.data.meta)
-      ? pick(result.data.meta, ['count', 'total', 'has_more', 'next_cursor']) : {};
+      ? pick(result.data.meta, ['count', 'total', 'has_more', 'next_cursor'], futureMetaOutput.shape) : {};
     result.data = { events: events.map((event) => futureEventSummary(event, args)), meta };
     return withEmptyExplanation(result, result.data.events.length,
       'No futures competitions returned on this page within the requested sport, markets, affiliates, and settlement scope. This does not establish overall coverage.',

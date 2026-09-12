@@ -503,6 +503,44 @@ test('client cancellation aborts upstream work and does not release the key unti
   }
 });
 
+test('slow body upload and upstream work share one total request deadline', { timeout: 2_000 }, async () => {
+  let began;
+  const upstreamBegan = new Promise((resolve) => { began = resolve; });
+  let aborted;
+  const upstreamAborted = new Promise((resolve) => { aborted = resolve; });
+  const service = await hosted((_url, options) => new Promise((_resolve, reject) => {
+    began();
+    options.signal.addEventListener('abort', () => {
+      aborted();
+      reject(new DOMException('Aborted', 'AbortError'));
+    }, { once: true });
+  }), { requestTimeoutMs: 500 });
+  const body = JSON.stringify(callSports());
+  const started = performance.now();
+  const request = httpRequest(`${service.origin}/mcp`, {
+    method: 'POST', headers: {
+      accept: 'application/json, text/event-stream', 'content-type': 'application/json',
+      'content-length': Buffer.byteLength(body),
+      'mcp-protocol-version': '2025-11-25', 'X-TheRundown-Key': KEY_A,
+    },
+  }, (res) => res.resume());
+  request.on('error', () => {});
+  request.write(body.slice(0, 1));
+  const upload = setTimeout(() => request.end(body.slice(1)), 350);
+  try {
+    await upstreamBegan;
+    await Promise.race([
+      upstreamAborted,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('total request deadline exceeded')), 750)),
+    ]);
+    assert.ok(performance.now() - started < 750, 'body upload must not grant a second full upstream deadline');
+  } finally {
+    clearTimeout(upload);
+    request.destroy();
+    await service.close();
+  }
+});
+
 test('timeout cancels an open upstream response body and holds the key until cancellation settles', async () => {
   let bodyStarted;
   const started = new Promise((resolve) => { bodyStarted = resolve; });

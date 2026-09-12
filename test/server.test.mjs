@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { AjvJsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/ajv';
 import { AGENT_BRIEF, FIRST_CONVERSATION, createDataServer } from '../server.mjs';
 import { getSmokeScope, hasExpectedTools, selectEventId } from '../smoke.mjs';
 
@@ -200,6 +201,166 @@ test('keyless discovery exposes the brief and tool contracts without an upstream
     });
   }, { apiKey: ' ' });
   assert.equal(calls, 0);
+});
+
+test('SDK calls validate all tool outputs, empty results, sanitized errors, and null projections', async () => {
+  let emptyEvents = false;
+  let errorMode = false;
+  await withServer(async (url) => {
+    if (errorMode) return response({ secret: KEY }, { status: 403, headers: { 'X-Tier': 'free' } });
+    if (url.pathname === '/api/v2/sports') {
+      return response({ sports: [
+        { sport_id: '3', sport_name: false },
+        { sport_id: null, sport_name: null },
+      ] });
+    }
+    if (url.pathname === '/api/v2/affiliates') {
+      return response({ affiliates: [
+        { affiliate_id: 19, affiliate_name: false },
+        { affiliate_id: 19, affiliate_name: null },
+      ] });
+    }
+    if (url.pathname === '/api/v2/markets') {
+      return response([
+        { id: '1', name: false, description: 3, period_id: '1', live: 'false',
+          live_variant_id: '41', sports: [3] },
+        { id: null, name: null, description: null, period_id: null, live: null,
+          live_variant_id: null, sports: [3] },
+      ]);
+    }
+    if (url.pathname === '/api/v2/sports/3/events/2026-09-12') {
+      if (emptyEvents) return response({ events: [] });
+      return response({ events: [{
+        event_id: 3, sport_id: '3', event_date: false,
+        score: {
+          event_status: null, score_away: null, score_home: null, game_clock: null,
+          display_clock: null, game_period: null, event_status_detail: null, updated_at: null,
+        },
+        teams: [{ team_id: '10', name: false, mascot: 3, is_home: 'true', is_away: 0 }],
+        markets: [{ market_id: 1 }],
+      }, {
+        event_id: null, sport_id: null, event_date: null,
+        score: {
+          event_status: null, score_away: null, score_home: null, game_clock: null,
+          display_clock: null, game_period: null, event_status_detail: null, updated_at: null,
+        },
+        teams: [{ team_id: null, name: null, mascot: null, is_home: null, is_away: null }],
+        markets: [{ market_id: 1 }],
+      }] });
+    }
+    if (url.pathname === '/api/v2/events/evt-null') {
+      return response({ events: [{
+        event_id: 'evt-null', sport_id: '3', event_date: false, score: null,
+        teams: [{ team_id: '10', name: false, mascot: 3, is_home: 'true', is_away: 0 }],
+        markets: [{
+          market_id: 1, name: false, period_id: '1',
+          participants: [{ id: 'participant', type: false, name: 3, lines: [{ id: {}, value: null, prices: {
+            19: { price: -110, is_main_line: true, updated_at: false },
+          } }] }],
+        }],
+      }] });
+    }
+    if (url.pathname === '/api/v2/sports/40/futures') {
+      return response({
+        meta: { count: null, total: null, has_more: null, next_cursor: null },
+        events: [{
+          event_id: 40, sport_id: 40, event_date: false, settle_by: 2026, event_status: {},
+          schedule: { event_name: false, league_name: 3, season_year: {} },
+          settlement: { 1141: {
+            status: {}, settled_at: 3, winning_line: {}, winning_participant_id: [],
+          } },
+          markets: [{
+            market_id: 1141, name: false, period_id: '0',
+            participants: [{ id: 'participant', type: false, name: 3, lines: [{ id: {}, value: null, prices: {
+              19: { price: 100, is_main_line: true, updated_at: false },
+            } }] }],
+          }],
+        }],
+      });
+    }
+    throw new Error(`Unexpected test URL: ${url}`);
+  }, async (client) => {
+    const tools = Object.fromEntries((await client.listTools()).tools.map((tool) => [tool.name, tool]));
+    const validator = new AjvJsonSchemaValidator();
+    const assertOutput = (name, result) => {
+      const validation = validator.getValidator(tools[name].outputSchema)(result.structuredContent);
+      assert.equal(validation.valid, true, `${name}: ${validation.errorMessage}`);
+    };
+
+    const outputs = {};
+    for (const [name, arguments_] of [
+      ['list_sports', {}],
+      ['list_affiliates', {}],
+      ['list_markets', {}],
+      ['list_events', { sport_id: 3, date: '2026-09-12' }],
+      ['get_main_lines', { event_id: 'evt-null' }],
+      ['list_futures', { sport_id: 40 }],
+    ]) {
+      const result = await client.callTool({ name, arguments: arguments_ });
+      assert.equal(result.isError ?? false, false, textResult(result));
+      assertOutput(name, result);
+      outputs[name] = result.structuredContent;
+    }
+
+    assert.deepEqual(outputs.list_sports.data.sports, [
+      {}, { sport_id: null, sport_name: null },
+    ]);
+    assert.deepEqual(outputs.list_affiliates.data.affiliates, [
+      { affiliate_id: 19 }, { affiliate_id: 19, affiliate_name: null },
+    ]);
+    assert.deepEqual(outputs.list_markets.data.items, [
+      { sports: [3] },
+      { id: null, name: null, description: null, period_id: null, live: null,
+        live_variant_id: null, sports: [3] },
+    ]);
+    assert.deepEqual(outputs.list_events.data.items, [
+      {
+        score: {
+          event_status: null, score_away: null, score_home: null, game_clock: null,
+          display_clock: null, game_period: null, event_status_detail: null, updated_at: null,
+        },
+        teams: [{}], market_ids: [1],
+      },
+      {
+        event_id: null, sport_id: null, event_date: null,
+        score: {
+          event_status: null, score_away: null, score_home: null, game_clock: null,
+          display_clock: null, game_period: null, event_status_detail: null, updated_at: null,
+        },
+        teams: [{ team_id: null, name: null, mascot: null, is_home: null, is_away: null }],
+        market_ids: [1],
+      },
+    ]);
+    assert.deepEqual(outputs.get_main_lines.data.event, {
+      event_id: 'evt-null', score: null, teams: [{}], market_ids: [1],
+    });
+    assert.deepEqual(outputs.get_main_lines.data.items, [{
+      market_id: 1, participant: { id: 'participant' }, line_value: null,
+      affiliate_id: 19, price: -110, is_main_line: true,
+    }]);
+    assert.deepEqual(outputs.list_futures.data, {
+      events: [{
+        sport_id: 40, schedule: {}, settlement: { 1141: { settled_at: 3 } },
+        market_ids: [1141], main_lines: [{
+          market_id: 1141, participant: { id: 'participant' }, line_value: null,
+          affiliate_id: 19, price: 100, is_main_line: true,
+        }],
+      }],
+      meta: { count: null, total: null, has_more: null, next_cursor: null },
+    });
+
+    emptyEvents = true;
+    const empty = await client.callTool({ name: 'list_events', arguments: { sport_id: 3, date: '2026-09-12' } });
+    assert.equal(empty.isError ?? false, false, textResult(empty));
+    assert.equal(empty.structuredContent.empty.code, 'no_results');
+    assertOutput('list_events', empty);
+
+    errorMode = true;
+    const sanitized = await client.callTool({ name: 'list_sports', arguments: {} });
+    assert.equal(sanitized.isError, true);
+    assert.equal(textResult(sanitized).includes(KEY), false);
+    assertOutput('list_sports', sanitized);
+  });
 });
 
 test('keys containing newlines are rejected at construction', () => {
