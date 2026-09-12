@@ -299,33 +299,17 @@ export function createHostedServer({
       jsonError(res, 415, 'Content-Type must be application/json.');
       return;
     }
-    const requestDeadline = Date.now() + timeoutMs;
-    const bodyController = new AbortController();
-    const bodyTimer = setTimeout(() => bodyController.abort(), timeoutMs);
-    let body;
-    try {
-      body = await readJsonBody(req, bodyController.signal);
-    } catch (error) {
-      const status = error?.code === 'body_too_large' ? 413
-        : error?.code === 'invalid_json' || error?.code === 'invalid_jsonrpc' ? 400
-        : error?.code === 'request_aborted' ? 408 : 400;
-      const message = status === 413 ? 'Request body exceeds 64 KiB.'
-        : error?.code === 'invalid_json' ? 'Request body must contain valid JSON.'
-        : status === 408 ? 'Request timed out or was cancelled.'
-        : 'Request must contain one JSON-RPC object.';
-      jsonError(res, status, message);
-      return;
-    } finally {
-      clearTimeout(bodyTimer);
-    }
     const apiKey = credentialFrom(req);
-    const anonymousDiscovery = !apiKey && !hasCredentialInput(req) && isAnonymousDiscoveryRequest(body);
-    if (!apiKey && !anonymousDiscovery) {
+    if (!apiKey && hasCredentialInput(req)) {
       jsonError(res, 401, 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.');
       return;
     }
-    // The active map is bounded by the process cap and contains only digests.
-    const keyDigest = createHash('sha256').update(apiKey ?? 'anonymous-discovery').digest('base64url');
+    // Admission happens before reading a body, including for the one shared
+    // anonymous identity. Slow uploads cannot bypass the existing process cap.
+    // The map contains only namespaced digests, never customer credentials.
+    const keyDigest = createHash('sha256')
+      .update(JSON.stringify([apiKey ? 'authenticated' : 'anonymous', apiKey ?? '']))
+      .digest('base64url');
     if (activeTotal >= concurrencyCap || activeByKey.has(keyDigest)) {
       jsonError(res, 429, 'Request capacity is busy. Retry after one second.', { 'retry-after': '1' });
       return;
@@ -335,7 +319,7 @@ export function createHostedServer({
 
     const controller = new AbortController();
     const abort = () => controller.abort();
-    const timer = setTimeout(abort, Math.max(1, requestDeadline - Date.now()));
+    const timer = setTimeout(abort, timeoutMs);
     const pendingFetches = new Set();
     const trackedFetch = (url, init = {}) => {
       const request = Promise.resolve().then(async () => {
@@ -361,8 +345,13 @@ export function createHostedServer({
     });
 
     try {
+      const body = await readJsonBody(req, controller.signal);
       if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
-      const server = createDataServer({ apiKey, fetchImpl: trackedFetch });
+      if (!apiKey && !isAnonymousDiscoveryRequest(body)) {
+        jsonError(res, 401, 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.');
+        return;
+      }
+      const server = createDataServer({ apiKey: apiKey ?? null, fetchImpl: trackedFetch });
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,

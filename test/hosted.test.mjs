@@ -87,6 +87,24 @@ async function rawRequest(origin, { method = 'POST', headers = {}, body, path = 
   });
 }
 
+function unfinishedRequest(origin, key) {
+  let complete;
+  const finished = new Promise((resolve) => { complete = resolve; });
+  const req = httpRequest(`${origin}/mcp`, {
+    method: 'POST', headers: {
+      accept: 'application/json, text/event-stream', 'content-type': 'application/json',
+      'content-length': 4096,
+      ...(key === undefined ? {} : { 'X-TheRundown-Key': key }),
+    },
+  }, (res) => {
+    res.resume();
+    res.once('end', () => complete(res.statusCode));
+  });
+  req.on('error', () => complete(null));
+  req.write('{"jsonrpc":');
+  return { req, finished };
+}
+
 async function clientFor(origin, key) {
   const transport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), {
     requestInit: { headers: { 'X-TheRundown-Key': key } },
@@ -392,6 +410,56 @@ test('process-wide concurrent requests return 429 without queueing at the config
     complete();
     assert.equal((await first).status, 200);
   } finally {
+    await service.close();
+  }
+});
+
+test('unfinished authenticated and anonymous bodies hold capacity until cancellation', async () => {
+  let reads = 0;
+  const service = await hosted(async () => { reads += 1; return response({ sports: [] }); }, {
+    maxConcurrent: 1, requestTimeoutMs: 2_000,
+  });
+  try {
+    for (const key of [KEY_A, undefined]) {
+      const stalled = unfinishedRequest(service.origin, key);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        assert.equal((await post(service.origin, { key: KEY_B })).status, 429);
+        assert.equal((await postAnonymous(service.origin)).status, 429);
+      } finally {
+        stalled.req.destroy();
+      }
+      let ready = false;
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const result = await postAnonymous(service.origin);
+        if (result.status === 200) { ready = true; break; }
+        assert.equal(result.status, 429);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      assert.equal(ready, true, 'cancelled body did not release capacity');
+    }
+    assert.equal(reads, 0);
+  } finally {
+    await service.close();
+  }
+});
+
+test('anonymous unfinished bodies share the request deadline without calling the Product API', async () => {
+  let reads = 0;
+  const service = await hosted(async () => { reads += 1; return response({ sports: [] }); }, {
+    requestTimeoutMs: 100,
+  });
+  const stalled = unfinishedRequest(service.origin);
+  try {
+    const status = await Promise.race([
+      stalled.finished,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('body deadline exceeded')), 2_000)),
+    ]);
+    assert.equal(status, 408);
+    assert.equal((await postAnonymous(service.origin)).status, 200);
+    assert.equal(reads, 0);
+  } finally {
+    stalled.req.destroy();
     await service.close();
   }
 });
