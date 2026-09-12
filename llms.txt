@@ -15,7 +15,7 @@ The separate documentation MCP is https://docs.therundown.io/mcp and searches do
 Documentation MCP configuration: https://github.com/TheRundown/documentation-mcp
 
 Run from a checked-out source tree with Node.js 22+ using `npm ci --ignore-scripts`
-followed by `npm test`, or download the versioned 0.2.2 ZIP from the setup guide.
+followed by `npm test`, or download the versioned 0.2.3 ZIP from the setup guide.
 The downloadable release is local stdio only. The hosted, authenticated
 Streamable HTTP endpoint at https://mcp.therundown.io/mcp is available
 separately; there is still no published npm package.
