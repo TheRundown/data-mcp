@@ -34,7 +34,7 @@ when needed; these mapping fields are not part of the local tool summaries.
 Since 0.2.1, the source adds therundown://brief, shared first-conversation
 instructions, and scoped empty/error explanations. Read the resource without
 an API call. Unknown plan, entitlement, retry, or remaining-point details stay
-null. The published 0.2.2 ZIP contains only the local stdio server.
+null. The published 0.2.3 ZIP contains only the local stdio server.
 
 Source version 0.2.3 lets clients initialize, list titled tool schemas and
 resources, and read therundown://brief before configuring a key. Product tool
