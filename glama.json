@@ -24,14 +24,8 @@
           "description": "Your TheRundown Product API key. The server sends it only in the X-TheRundown-Key header and never accepts it as a tool argument."
         }
       },
-      "required": [
-        "THERUNDOWN_API_KEY"
-      ],
       "additionalProperties": false
-    },
-    "placeholderArguments": [
-      "THERUNDOWN_API_KEY"
-    ]
+    }
   },
   "tags": [
     "mcp",

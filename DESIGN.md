@@ -1,6 +1,6 @@
 # Data MCP design and release criteria
 
-Status: local source 0.2.2, September 11, 2026. Owner: TheRundown.
+Status: local source 0.2.3, September 12, 2026. Owner: TheRundown.
 
 ## Scope
 
@@ -13,7 +13,7 @@ MCP client → local stdio process → HTTPS Product API
        X-TheRundown-Key upstream
 ```
 
-The official MCP SDK owns protocol negotiation, framing, cancellation, and tool schema validation. The local executable registers tools with strict Zod input schemas. It has no HTTP listener, OAuth provider, remote session store, or published package identity. The documentation MCP remains a separate service. A separately started HTTP implementation candidate is documented in the repository's `HOSTED.md` and excluded from local ZIPs.
+The official MCP SDK owns protocol negotiation, framing, cancellation, and tool schema validation. The local executable registers tools with strict Zod input schemas, human-readable titles, and object-root output schemas. It has no HTTP listener, OAuth provider, remote session store, or published package identity. The documentation MCP remains a separate service. The separately started hosted HTTP implementation is documented in `HOSTED.md` and excluded from local ZIPs.
 
 ## Contract
 
@@ -33,8 +33,9 @@ Dated price projection preserves participant identity/type, market/period, line 
 The result envelope is `{source_url, retrieved_at, usage, data}` in structured content and JSON text. Source URLs are reproducible and credential-free. Catalog, date-market, event, and main-line pagination provides `items`, `total`, `page`, `limit`, and `next_page`; each local page is a fresh upstream snapshot, not a stable cursor or billing optimization. Futures preserves upstream `count`, `total`, `has_more`, and `next_cursor`; a cursor page is still metered and may be partial. Catalog presence and empty market responses are not evidence of full or absent coverage.
 
 `therundown://brief` exposes the Build with AI rules and first conversation as
-Markdown. Initialization includes the same instructions. Both are local
-discovery operations with no Product API call. Empty successes add an `empty`
+Markdown. Initialization, tool and resource listing, and brief reads require no
+key and make no Product API call. Product tool calls return `missing_credentials`
+before network activity when no key is configured. Empty successes add an `empty`
 explanation and scope outside `data`, preserving pagination shape. Errors expose
 recognized plan/entitlement/usage/retry fields with unknown values set to null;
 error bodies are bounded to 64 KiB and never echoed.
@@ -43,6 +44,7 @@ error bodies are bounded to 64 KiB and never echoed.
 
 - The executable uses one fixed HTTPS Product origin and GET-only paths. Redirects fail rather than forwarding a key to another origin.
 - The key comes from the process environment and is sent only in `X-TheRundown-Key`. The server does not read a repository `.env` automatically, log request headers, or return raw error bodies. Configured key text is redacted from tool output.
+- The hosted adapter permits anonymous MCP metadata discovery only. Product tool calls and every method outside its explicit discovery allowlist require a syntactically valid Product credential at the HTTP boundary.
 - One request may be in flight. Extra concurrent calls return `busy`; calls are not queued and there are no automatic retries. Clients control request cadence and should respect `429`/`Retry-After` and the calling plan's quota.
 - A 15-second deadline and MCP cancellation abort the fetch/body read. Upstream bodies are capped at 4 MiB before JSON parsing. Large requests fail explicitly instead of returning silent partial odds.
 - Only allowlisted usage/entitlement headers are returned. `401`, `403`, `404`, and `429` get useful, sanitized messages. Transport and unexpected errors get a generic error; stdout is reserved for MCP.

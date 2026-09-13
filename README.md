@@ -12,11 +12,12 @@ The separate [HTTP adapter](HOSTED.md) implements the hosted endpoint at
 `https://mcp.therundown.io/mcp`. It is excluded from the local ZIP and is
 never started by `npm start`; the ZIP remains a local, stdio-only install.
 
-The checked-out source is version **0.2.2**. It ships the same local runtime as
-0.2.1, with a bundle README that also names the hosted endpoint. 0.2.1 added the
-`therundown://brief` resource, shared first-conversation instructions, and
-structured error and empty result explanations. The published source ZIP contains
-the same local runtime.
+The checked-out source is version **0.2.3**. Clients can initialize, list the six
+tools and public resources, and read `therundown://brief` before a Product API key
+is configured. Tool definitions now include human-readable titles and object-root
+output schemas. Product tool calls still require a key and fail before any network
+request when it is absent. The latest published source ZIP remains 0.2.2 until the
+0.2.3 release artifact is verified and published.
 
 Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.2.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.2.sha256), and extract it. The official ZIP SHA-256 is `e82181727bb69bf0cae6edc215b4b3f432dc497e4afd32c7936b189931efd0a9`. The [ZIP manifest](releases/0.2.2/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
 
@@ -63,7 +64,7 @@ For Cursor, use the global `~/.cursor/mcp.json` and make the key available in th
 
 Client references: [local MCP servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers), [Cursor](https://cursor.com/docs/mcp).
 
-Replace the path and key locally. Use your client's secret storage or inherited environment when available. Do not commit a filled-in client config. The server reads `THERUNDOWN_API_KEY` from its process environment and sends it only as `X-TheRundown-Key`; keys are never accepted as tool arguments. `stdout` contains only MCP protocol messages. A missing key exits with a generic message on `stderr`.
+Replace the path and key locally. Use your client's secret storage or inherited environment when available. Do not commit a filled-in client config. The server reads `THERUNDOWN_API_KEY` from its process environment and sends it only as `X-TheRundown-Key`; keys are never accepted as tool arguments. `stdout` contains only MCP protocol messages. Without a key, the process stays available for MCP metadata discovery and returns a sanitized `missing_credentials` error for Product tool calls without making a network request.
 
 The six tools are:
 

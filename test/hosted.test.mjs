@@ -58,6 +58,14 @@ async function post(origin, { key = KEY_A, authorization, path = '/mcp', body = 
   });
 }
 
+async function postAnonymous(origin, { path = '/mcp', body = REQUEST, headers = {} } = {}) {
+  return fetch(`${origin}${path}`, {
+    method: 'POST',
+    headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json', ...headers },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
+}
+
 async function rawPost(origin, headers, body = REQUEST) {
   return rawRequest(origin, { headers, body }).then(({ status }) => status);
 }
@@ -79,11 +87,36 @@ async function rawRequest(origin, { method = 'POST', headers = {}, body, path = 
   });
 }
 
+function unfinishedRequest(origin, key) {
+  let complete;
+  const finished = new Promise((resolve) => { complete = resolve; });
+  const req = httpRequest(`${origin}/mcp`, {
+    method: 'POST', headers: {
+      accept: 'application/json, text/event-stream', 'content-type': 'application/json',
+      'content-length': 4096,
+      ...(key === undefined ? {} : { 'X-TheRundown-Key': key }),
+    },
+  }, (res) => {
+    res.resume();
+    res.once('end', () => complete(res.statusCode));
+  });
+  req.on('error', () => complete(null));
+  req.write('{"jsonrpc":');
+  return { req, finished };
+}
+
 async function clientFor(origin, key) {
   const transport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), {
     requestInit: { headers: { 'X-TheRundown-Key': key } },
   });
   const client = new Client({ name: 'hosted-integration-test', version: '1.0.0' }, { capabilities: {} });
+  await client.connect(transport);
+  return { client, transport };
+}
+
+async function anonymousClientFor(origin) {
+  const transport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`));
+  const client = new Client({ name: 'anonymous-hosted-test', version: '1.0.0' }, { capabilities: {} });
   await client.connect(transport);
   return { client, transport };
 }
@@ -151,6 +184,47 @@ test('actual Streamable HTTP client inherits exactly six tools and the brief res
   }
 });
 
+test('anonymous discovery permits only public metadata and never calls the Product API', async () => {
+  let reads = 0;
+  const service = await hosted(async () => {
+    reads += 1;
+    return response({ sports: [] });
+  });
+  const toolsList = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
+  const resourcesList = { jsonrpc: '2.0', id: 3, method: 'resources/list', params: {} };
+  const briefRead = { jsonrpc: '2.0', id: 4, method: 'resources/read', params: { uri: 'therundown://brief' } };
+  try {
+    for (const body of [REQUEST, toolsList, resourcesList, briefRead, {
+      jsonrpc: '2.0', method: 'notifications/initialized', params: {},
+    }]) {
+      const result = await postAnonymous(service.origin, { body });
+      assert.ok([200, 202].includes(result.status), `expected metadata request to succeed, got ${result.status}`);
+    }
+    const connection = await anonymousClientFor(service.origin);
+    try {
+      assert.deepEqual(connection.client.getServerVersion(), { name: 'therundown-data', version: '0.2.3' });
+      assert.equal((await connection.client.listTools()).tools.length, 6);
+      assert.equal((await connection.client.listResources()).resources[0].uri, 'therundown://brief');
+      assert.equal((await connection.client.readResource({ uri: 'therundown://brief' })).contents[0].mimeType, 'text/markdown');
+    } finally {
+      await closeClient(connection);
+    }
+    assert.equal((await postAnonymous(service.origin, { body: callSports() })).status, 401);
+    assert.equal((await postAnonymous(service.origin, {
+      body: { jsonrpc: '2.0', id: 5, method: 'resources/read', params: { uri: 'therundown://other' } },
+    })).status, 401);
+    assert.equal((await postAnonymous(service.origin, {
+      body: { jsonrpc: '2.0', id: 6, method: 'ping', params: {} },
+    })).status, 401);
+    assert.equal((await postAnonymous(service.origin, {
+      body: REQUEST, headers: { Authorization: 'Basic synthetic' },
+    })).status, 401);
+    assert.equal(reads, 0);
+  } finally {
+    await service.close();
+  }
+});
+
 test('accepts either supported credential form and keeps upstream tenant credentials separate', async () => {
   const received = [];
   const service = await hosted(async (_url, options) => {
@@ -169,17 +243,15 @@ test('accepts either supported credential form and keeps upstream tenant credent
   }
 });
 
-test('rejects absent, malformed, duplicated, ambiguous, and query-string credentials before MCP handling', async () => {
+test('rejects malformed, duplicated, ambiguous, and query-string credentials on protected requests', async () => {
   let reads = 0;
   const service = await hosted(async () => { reads += 1; return response({ sports: [] }); });
   try {
-    const absent = await fetch(`${service.origin}/mcp`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(REQUEST),
-    });
-    assert.equal(absent.status, 401);
-    assert.equal((await post(service.origin, { key: undefined, authorization: 'Basic synthetic' })).status, 401);
+    assert.equal((await post(service.origin, {
+      key: undefined, authorization: 'Basic synthetic', body: callSports(),
+    })).status, 401);
     const ambiguous = await post(service.origin, {
-      headers: { Authorization: `Bearer ${KEY_B}` },
+      headers: { Authorization: `Bearer ${KEY_B}` }, body: callSports(),
     });
     assert.equal(ambiguous.status, 401);
     for (const key of [`${KEY_A},${KEY_B}`, `${KEY_A}, ${KEY_B}`, `${KEY_A} ${KEY_B}`]) {
@@ -342,6 +414,56 @@ test('process-wide concurrent requests return 429 without queueing at the config
   }
 });
 
+test('unfinished authenticated and anonymous bodies hold capacity until cancellation', async () => {
+  let reads = 0;
+  const service = await hosted(async () => { reads += 1; return response({ sports: [] }); }, {
+    maxConcurrent: 1, requestTimeoutMs: 2_000,
+  });
+  try {
+    for (const key of [KEY_A, undefined]) {
+      const stalled = unfinishedRequest(service.origin, key);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        assert.equal((await post(service.origin, { key: KEY_B })).status, 429);
+        assert.equal((await postAnonymous(service.origin)).status, 429);
+      } finally {
+        stalled.req.destroy();
+      }
+      let ready = false;
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const result = await postAnonymous(service.origin);
+        if (result.status === 200) { ready = true; break; }
+        assert.equal(result.status, 429);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      assert.equal(ready, true, 'cancelled body did not release capacity');
+    }
+    assert.equal(reads, 0);
+  } finally {
+    await service.close();
+  }
+});
+
+test('anonymous unfinished bodies share the request deadline without calling the Product API', async () => {
+  let reads = 0;
+  const service = await hosted(async () => { reads += 1; return response({ sports: [] }); }, {
+    requestTimeoutMs: 100,
+  });
+  const stalled = unfinishedRequest(service.origin);
+  try {
+    const status = await Promise.race([
+      stalled.finished,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('body deadline exceeded')), 2_000)),
+    ]);
+    assert.equal(status, 408);
+    assert.equal((await postAnonymous(service.origin)).status, 200);
+    assert.equal(reads, 0);
+  } finally {
+    stalled.req.destroy();
+    await service.close();
+  }
+});
+
 test('client cancellation aborts upstream work and does not release the key until abort settles', async () => {
   let began;
   const upstreamBegan = new Promise((resolve) => { began = resolve; });
@@ -377,6 +499,44 @@ test('client cancellation aborts upstream work and does not release the key unti
     await new Promise((resolve) => setTimeout(resolve, 40));
     assert.equal((await post(service.origin, { body: callSports() })).status, 200);
   } finally {
+    await service.close();
+  }
+});
+
+test('slow body upload and upstream work share one total request deadline', { timeout: 2_000 }, async () => {
+  let began;
+  const upstreamBegan = new Promise((resolve) => { began = resolve; });
+  let aborted;
+  const upstreamAborted = new Promise((resolve) => { aborted = resolve; });
+  const service = await hosted((_url, options) => new Promise((_resolve, reject) => {
+    began();
+    options.signal.addEventListener('abort', () => {
+      aborted();
+      reject(new DOMException('Aborted', 'AbortError'));
+    }, { once: true });
+  }), { requestTimeoutMs: 500 });
+  const body = JSON.stringify(callSports());
+  const started = performance.now();
+  const request = httpRequest(`${service.origin}/mcp`, {
+    method: 'POST', headers: {
+      accept: 'application/json, text/event-stream', 'content-type': 'application/json',
+      'content-length': Buffer.byteLength(body),
+      'mcp-protocol-version': '2025-11-25', 'X-TheRundown-Key': KEY_A,
+    },
+  }, (res) => res.resume());
+  request.on('error', () => {});
+  request.write(body.slice(0, 1));
+  const upload = setTimeout(() => request.end(body.slice(1)), 350);
+  try {
+    await upstreamBegan;
+    await Promise.race([
+      upstreamAborted,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('total request deadline exceeded')), 750)),
+    ]);
+    assert.ok(performance.now() - started < 750, 'body upload must not grant a second full upstream deadline');
+  } finally {
+    clearTimeout(upload);
+    request.destroy();
     await service.close();
   }
 });

@@ -1,4 +1,4 @@
-# Official TheRundown Data MCP 0.2.2
+# Official TheRundown Data MCP 0.2.3
 
 This is the official local, read-only Data MCP from
 [TheRundown/data-mcp](https://github.com/TheRundown/data-mcp).
@@ -25,7 +25,7 @@ code, not a `.mcpb` extension or published npm package:
   "mcpServers": {
     "therundown-data": {
       "command": "/absolute/path/to/node",
-      "args": ["/absolute/path/to/therundown-data-mcp-0.2.2/server.mjs"],
+      "args": ["/absolute/path/to/therundown-data-mcp-0.2.3/server.mjs"],
       "env": { "THERUNDOWN_API_KEY": "YOUR_API_KEY" }
     }
   }
@@ -71,8 +71,9 @@ and the returned usage headers. Explain empty results without inventing odds.
 ```
 
 Read `therundown://brief` for the current Build with AI rules and first
-conversation. Initialization supplies the same instructions. Neither discovery
-operation calls the Product API.
+conversation. Initialization, tool and resource listing, and brief reads work
+without a key and do not call the Product API. Product tool calls still require
+a key and return `missing_credentials` before any network request when it is absent.
 
 ## Evidence and errors
 

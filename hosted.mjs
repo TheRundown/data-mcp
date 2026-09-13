@@ -91,6 +91,24 @@ function credentialFrom(req) {
   return key;
 }
 
+function hasCredentialInput(req) {
+  return hasAnyHeader(req, 'x-therundown-key') || hasAnyHeader(req, 'authorization')
+    || req.rawHeaders.some((_, index) => index % 2 === 0
+      && CREDENTIAL_ALIASES.has(req.rawHeaders[index].toLowerCase()));
+}
+
+// Metadata discovery is deliberately narrow: it can tell a client what this
+// server is and how to use it, but can never reach the Product API. Every
+// other JSON-RPC method still needs a Product credential at the HTTP boundary.
+function isAnonymousDiscoveryRequest(body) {
+  if (body.jsonrpc !== '2.0' || typeof body.method !== 'string') return false;
+  if (body.method === 'initialize' || body.method === 'notifications/initialized'
+    || body.method === 'tools/list' || body.method === 'resources/list') return true;
+  return body.method === 'resources/read'
+    && body.params && typeof body.params === 'object' && !Array.isArray(body.params)
+    && body.params.uri === 'therundown://brief';
+}
+
 function acceptsJson(req) {
   const value = req.headers['content-type'];
   if (Array.isArray(value) || typeof value !== 'string') return false;
@@ -282,12 +300,16 @@ export function createHostedServer({
       return;
     }
     const apiKey = credentialFrom(req);
-    if (!apiKey) {
+    if (!apiKey && hasCredentialInput(req)) {
       jsonError(res, 401, 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.');
       return;
     }
-    // The active map is bounded by the process cap and contains only digests.
-    const keyDigest = createHash('sha256').update(apiKey).digest('base64url');
+    // Admission happens before reading a body, including for the one shared
+    // anonymous identity. Slow uploads cannot bypass the existing process cap.
+    // The map contains only namespaced digests, never customer credentials.
+    const keyDigest = createHash('sha256')
+      .update(JSON.stringify([apiKey ? 'authenticated' : 'anonymous', apiKey ?? '']))
+      .digest('base64url');
     if (activeTotal >= concurrencyCap || activeByKey.has(keyDigest)) {
       jsonError(res, 429, 'Request capacity is busy. Retry after one second.', { 'retry-after': '1' });
       return;
@@ -325,7 +347,11 @@ export function createHostedServer({
     try {
       const body = await readJsonBody(req, controller.signal);
       if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
-      const server = createDataServer({ apiKey, fetchImpl: trackedFetch });
+      if (!apiKey && !isAnonymousDiscoveryRequest(body)) {
+        jsonError(res, 401, 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.');
+        return;
+      }
+      const server = createDataServer({ apiKey: apiKey ?? null, fetchImpl: trackedFetch });
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
