@@ -76,9 +76,13 @@ export async function exchangeOAuthCredential(token, secret, fetchImpl, signal) 
     }
     const value = await boundedJson(response);
     const names = ['api_key', 'account_id', 'expires_at', 'scope', 'resource'];
+    // Citizen emits UTC seconds. Also accept canonical millisecond ISO output;
+    // reject Date.parse's calendar normalization (e.g. February 30 or 24:00).
     const expires = typeof value?.expires_at === 'string'
-      && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value.expires_at)
+      && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value.expires_at)
       ? Date.parse(value.expires_at) : NaN;
+    const canonicalExpiry = Number.isFinite(expires)
+      && new Date(expires).toISOString() === value.expires_at.replace(/(?<=:\d{2})Z$/, '.000Z');
     const now = Date.now();
     if (!value || typeof value !== 'object' || Array.isArray(value)
       || Object.keys(value).length !== names.length || !names.every((name) => Object.hasOwn(value, name))
@@ -86,7 +90,7 @@ export async function exchangeOAuthCredential(token, secret, fetchImpl, signal) 
       || !/^mcp1\.[A-Za-z0-9_-]+$/.test(value.api_key)
       || Buffer.from(value.api_key.slice(5), 'base64url').toString('base64url') !== value.api_key.slice(5)
       || typeof value.account_id !== 'string' || !/^[a-f0-9]{32}$/.test(value.account_id)
-      || !Number.isFinite(expires) || expires <= now || expires > now + 65_000
+      || !canonicalExpiry || expires <= now || expires > now + 65_000
       || value.scope !== OAUTH_SCOPE || value.resource !== OAUTH_RESOURCE) {
       throw new OAuthExchangeError(503);
     }

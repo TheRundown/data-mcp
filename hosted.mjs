@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createDataServer } from './server.mjs';
-import { exchangeOAuthCredential, OAuthExchangeError, OAUTH_METADATA, OAUTH_METADATA_PATH, OAUTH_SCOPE } from './oauth.mjs';
+import { exchangeOAuthCredential, OAuthExchangeError, OAUTH_METADATA, OAUTH_METADATA_PATH, OAUTH_RESOURCE, OAUTH_SCOPE } from './oauth.mjs';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_CONCURRENCY = 16;
@@ -283,6 +283,10 @@ export function createHostedServer({
     || !exchangeSecret || exchangeSecret.length > 4096 || /[\s,]/.test(exchangeSecret))) {
     configError('THERUNDOWN_MCP_EXCHANGE_SECRET must be a single secret header value.');
   }
+  if (exchangeSecret && policy.origin !== new URL(OAUTH_RESOURCE).origin
+    && !LOOPBACK_HOSTS.has(new URL(policy.origin).hostname.replace(/^\[|\]$/g, ''))) {
+    configError('OAuth requires the registered mcp.therundown.io resource origin.');
+  }
   const oauthChallenge = { 'www-authenticate': `Bearer resource_metadata="${policy.origin}${OAUTH_METADATA_PATH}", scope="${OAUTH_SCOPE}"` };
 
   let activeTotal = 0;
@@ -363,11 +367,12 @@ export function createHostedServer({
     let accountDigest;
     const trackedFetch = (url, init = {}) => {
       const request = Promise.resolve().then(async () => {
+        const signal = AbortSignal.any([controller.signal, ...(init.signal ? [init.signal] : [])]);
         const upstream = await fetchImpl(url, {
           ...init,
-          signal: AbortSignal.any([controller.signal, ...(init.signal ? [init.signal] : [])]),
+          signal,
         });
-        const wrapped = abortableResponse(upstream, controller.signal);
+        const wrapped = abortableResponse(upstream, signal);
         pendingFetches.add(wrapped.bodyDone);
         wrapped.bodyDone.finally(() => pendingFetches.delete(wrapped.bodyDone)).catch(() => {});
         return wrapped.response;

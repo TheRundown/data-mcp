@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { createHostedServer } from '../hosted.mjs';
-import { OAUTH_RESOURCE, OAUTH_EXCHANGE_URL, OAUTH_METADATA_PATH, OAUTH_ISSUER } from '../oauth.mjs';
+import { OAUTH_RESOURCE, OAUTH_EXCHANGE_URL, OAUTH_METADATA_PATH, OAUTH_ISSUER, exchangeOAuthCredential } from '../oauth.mjs';
 
 const KEY_A = 'synthetic-tenant-alpha';
 const KEY_B = 'synthetic-tenant-bravo';
@@ -618,6 +618,7 @@ test('OAuth is disabled without its service secret and discovery advertises the 
     assert.equal(reads, 0);
   } finally { await disabled.close(); }
   assert.throws(() => createHostedServer({ publicOrigin: 'https://mcp.example.com', exchangeSecret: 'two secrets' }), /configuration/);
+  assert.throws(() => createHostedServer({ publicOrigin: 'https://mcp.example.com', exchangeSecret: EXCHANGE_SECRET }), /registered/);
 
   const service = await hosted(async () => { reads += 1; return response({ sports: [] }); }, { exchangeSecret: EXCHANGE_SECRET });
   try {
@@ -794,6 +795,38 @@ test('OAuth limits concurrent tokens and accounts while different accounts stay 
     assert.equal((await first).status, 200);
     assert.equal((await oauthPost(service.origin, { token: OAUTH_TOKEN_B })).status, 200);
   } finally { complete(); await service.close(); }
+});
+
+test('OAuth expiry rejects normalized invalid calendar dates even within the valid lifetime', async (t) => {
+  t.mock.method(Date, 'now', () => Date.parse('2026-03-02T00:00:00Z'));
+  const signal = new AbortController().signal;
+  for (const expires_at of ['2026-02-30T00:00:30Z', '2026-03-01T24:00:30Z']) {
+    await assert.rejects(exchangeOAuthCredential(OAUTH_TOKEN_A, EXCHANGE_SECRET,
+      async () => exchangeResponse(exchangeBody({ expires_at })), signal), { status: 503 });
+  }
+  const valid = await exchangeOAuthCredential(OAUTH_TOKEN_A, EXCHANGE_SECRET,
+    async () => exchangeResponse(exchangeBody({ expires_at: '2026-03-02T00:00:30Z' })), signal);
+  assert.equal(valid.apiKey, DELEGATED_KEY);
+});
+
+test('Product body cancellation obeys the tool deadline before the longer hosted deadline', async (t) => {
+  const nativeTimeout = AbortSignal.timeout.bind(AbortSignal);
+  t.mock.method(AbortSignal, 'timeout', () => nativeTimeout(30));
+  let cancelledAt;
+  const service = await hosted(async (url) => {
+    if (String(url) === OAUTH_EXCHANGE_URL) return exchangeResponse();
+    return new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new TextEncoder().encode('{"sports":')); },
+      cancel() { cancelledAt = performance.now(); },
+    }), { headers: { 'content-type': 'application/json' } });
+  }, { exchangeSecret: EXCHANGE_SECRET, requestTimeoutMs: 1000 });
+  try {
+    const began = performance.now();
+    const result = await oauthPost(service.origin);
+    await result.json();
+    assert.ok(cancelledAt !== undefined && cancelledAt - began < 500,
+      'the tool signal must cancel the underlying body without waiting for the hosted timer');
+  } finally { await service.close(); }
 });
 
 test('OAuth exchange response cancellation holds request capacity until the upstream cancellation settles', async () => {
