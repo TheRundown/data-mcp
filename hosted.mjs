@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createDataServer } from './server.mjs';
+import { exchangeOAuthCredential, OAuthExchangeError, OAUTH_METADATA, OAUTH_METADATA_PATH, OAUTH_SCOPE } from './oauth.mjs';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_CONCURRENCY = 16;
@@ -47,13 +48,14 @@ function publicOriginPolicy(value) {
   return { origin: origin.origin, host: origin.host };
 }
 
-function jsonError(res, status, message, headers = {}) {
+function jsonError(res, status, message, headers = {}, details = {}) {
   if (res.headersSent || res.destroyed) return;
   const data = {
     status, plan: null, missing_entitlement: null, required_plan: null,
     retry_after: headers['retry-after'] ? Number(headers['retry-after']) : null,
     remaining_points: null, monthly_remaining_points: null,
     limit_reason: status === 429 ? 'mcp_capacity' : null,
+    ...details,
   };
   const text = JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message, data }, id: null });
   res.writeHead(status, {
@@ -97,9 +99,18 @@ function hasCredentialInput(req) {
       && CREDENTIAL_ALIASES.has(req.rawHeaders[index].toLowerCase()));
 }
 
+function oauthTokenFrom(req) {
+  if (hasAnyHeader(req, 'x-therundown-key') || !hasSingleHeader(req, 'authorization')
+    || req.rawHeaders.some((_, index) => index % 2 === 0
+      && CREDENTIAL_ALIASES.has(req.rawHeaders[index].toLowerCase()))) return undefined;
+  const raw = req.headers.authorization;
+  if (typeof raw !== 'string' || raw.length > 8192) return undefined;
+  return /^Bearer ([^\s,]+)$/.exec(raw)?.[1];
+}
+
 // Metadata discovery is deliberately narrow: it can tell a client what this
 // server is and how to use it, but can never reach the Product API. Every
-// other JSON-RPC method still needs a Product credential at the HTTP boundary.
+// other JSON-RPC method still needs the route's credential at the HTTP boundary.
 function isAnonymousDiscoveryRequest(body) {
   if (body.jsonrpc !== '2.0' || typeof body.method !== 'string') return false;
   if (body.method === 'initialize' || body.method === 'notifications/initialized'
@@ -176,7 +187,7 @@ function isAllowedRequest(req, policy) {
   }
   return req.url.startsWith('/') && !req.url.startsWith('//')
     && hasSingleHeader(req, 'host') && req.headers.host === policy.host
-    && (url.pathname === '/' || url.pathname === '/mcp') && url.search === ''
+    && ['/', '/mcp', '/oauth/mcp', OAUTH_METADATA_PATH].includes(req.url) && url.search === ''
     && !req.url.includes('?');
 }
 
@@ -254,7 +265,7 @@ function abortableResponse(response, signal) {
 }
 
 /**
- * Make the future Streamable HTTP adapter. It is intentionally not started by
+ * Make the Streamable HTTP adapter. It is intentionally not started by
  * import, and does not assert that any public hostname is currently deployed.
  */
 export function createHostedServer({
@@ -262,14 +273,21 @@ export function createHostedServer({
   fetchImpl = fetch,
   maxConcurrent = process.env.THERUNDOWN_MCP_MAX_CONCURRENT,
   requestTimeoutMs = process.env.THERUNDOWN_MCP_REQUEST_TIMEOUT_MS,
+  exchangeSecret = process.env.THERUNDOWN_MCP_EXCHANGE_SECRET,
 } = {}) {
   const policy = publicOriginPolicy(publicOrigin);
   const concurrencyCap = positiveInteger(maxConcurrent, DEFAULT_CONCURRENCY, 'THERUNDOWN_MCP_MAX_CONCURRENT', MAX_CONCURRENCY);
   const timeoutMs = positiveInteger(requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT_MS, 'THERUNDOWN_MCP_REQUEST_TIMEOUT_MS', 60_000);
   if (typeof fetchImpl !== 'function') configError('fetchImpl must be a function.');
+  if (exchangeSecret !== undefined && (typeof exchangeSecret !== 'string'
+    || !exchangeSecret || exchangeSecret.length > 4096 || /[\s,]/.test(exchangeSecret))) {
+    configError('THERUNDOWN_MCP_EXCHANGE_SECRET must be a single secret header value.');
+  }
+  const oauthChallenge = { 'www-authenticate': `Bearer resource_metadata="${policy.origin}${OAUTH_METADATA_PATH}", scope="${OAUTH_SCOPE}"` };
 
   let activeTotal = 0;
   const activeByKey = new Map();
+  const activeByAccount = new Set();
 
   const httpServer = createServer(async (req, res) => {
     const origin = req.headers.origin;
@@ -280,6 +298,22 @@ export function createHostedServer({
     }
     if (!isAllowedRequest(req, policy)) {
       jsonError(res, 403, 'Request host or path is not allowed.');
+      return;
+    }
+    const isOAuth = req.url === '/oauth/mcp';
+    if (req.url === OAUTH_METADATA_PATH) {
+      if (!exchangeSecret) {
+        jsonError(res, 404, 'OAuth account linking is unavailable.');
+      } else if (req.method !== 'GET') {
+        jsonError(res, 405, 'Only GET is supported.', { allow: 'GET' });
+      } else {
+        const body = JSON.stringify(OAUTH_METADATA);
+        res.writeHead(200, {
+          'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store',
+          'content-length': Buffer.byteLength(body),
+        });
+        res.end(body);
+      }
       return;
     }
     if (req.method === 'OPTIONS') {
@@ -299,16 +333,21 @@ export function createHostedServer({
       jsonError(res, 415, 'Content-Type must be application/json.');
       return;
     }
-    const apiKey = credentialFrom(req);
-    if (!apiKey && hasCredentialInput(req)) {
-      jsonError(res, 401, 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.');
+    if (isOAuth && !exchangeSecret) {
+      jsonError(res, 503, 'OAuth account linking is unavailable.');
+      return;
+    }
+    const credential = isOAuth ? oauthTokenFrom(req) : credentialFrom(req);
+    if (!credential && hasCredentialInput(req)) {
+      jsonError(res, 401, isOAuth ? 'Send one OAuth access token in Authorization: Bearer.'
+        : 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.', isOAuth ? oauthChallenge : {});
       return;
     }
     // Admission happens before reading a body, including for the one shared
     // anonymous identity. Slow uploads cannot bypass the existing process cap.
     // The map contains only namespaced digests, never customer credentials.
     const keyDigest = createHash('sha256')
-      .update(JSON.stringify([apiKey ? 'authenticated' : 'anonymous', apiKey ?? '']))
+      .update(JSON.stringify([credential ? (isOAuth ? 'oauth' : 'authenticated') : 'anonymous', credential ?? '']))
       .digest('base64url');
     if (activeTotal >= concurrencyCap || activeByKey.has(keyDigest)) {
       jsonError(res, 429, 'Request capacity is busy. Retry after one second.', { 'retry-after': '1' });
@@ -321,6 +360,7 @@ export function createHostedServer({
     const abort = () => controller.abort();
     const timer = setTimeout(abort, timeoutMs);
     const pendingFetches = new Set();
+    let accountDigest;
     const trackedFetch = (url, init = {}) => {
       const request = Promise.resolve().then(async () => {
         const upstream = await fetchImpl(url, {
@@ -347,11 +387,26 @@ export function createHostedServer({
     try {
       const body = await readJsonBody(req, controller.signal);
       if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
-      if (!apiKey && !isAnonymousDiscoveryRequest(body)) {
-        jsonError(res, 401, 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.');
+      const discovery = isAnonymousDiscoveryRequest(body);
+      if (!credential && !discovery) {
+        jsonError(res, 401, isOAuth ? 'Connect a TheRundown account with OAuth before calling this method.'
+          : 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.', isOAuth ? oauthChallenge : {});
         return;
       }
-      const server = createDataServer({ apiKey: apiKey ?? null, fetchImpl: trackedFetch });
+      let apiKey = isOAuth ? null : credential;
+      if (isOAuth && !discovery) {
+        const resolved = await exchangeOAuthCredential(credential, exchangeSecret, trackedFetch, controller.signal);
+        if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
+        const digest = createHash('sha256').update(resolved.accountId).digest('base64url');
+        if (activeByAccount.has(digest)) {
+          jsonError(res, 429, 'Request capacity is busy. Retry after one second.', { 'retry-after': '1' });
+          return;
+        }
+        accountDigest = digest;
+        activeByAccount.add(accountDigest);
+        apiKey = resolved.apiKey;
+      }
+      const server = createDataServer({ apiKey: apiKey ?? null, fetchImpl: trackedFetch, oauthSecurity: isOAuth });
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
@@ -371,20 +426,33 @@ export function createHostedServer({
       }
     } catch (error) {
       if (!res.headersSent && !res.destroyed) {
-        const status = error?.code === 'body_too_large' ? 413
+        const status = controller.signal.aborted ? 408
+          : error instanceof OAuthExchangeError ? error.status
+          : error?.code === 'body_too_large' ? 413
           : error?.code === 'invalid_json' || error?.code === 'invalid_jsonrpc' ? 400
-          : controller.signal.aborted ? 408 : 500;
-        const message = status === 413 ? 'Request body exceeds 64 KiB.'
+          : 500;
+        const message = error instanceof OAuthExchangeError && status !== 408
+          ? ({ 401: 'OAuth access was rejected. Reconnect your TheRundown account.',
+            403: 'The connected account does not have active Product API access.',
+            429: 'Account access is rate limited. Do not automatically retry.',
+            503: 'OAuth account access is temporarily unavailable.' }[status])
+          : status === 413 ? 'Request body exceeds 64 KiB.'
           : error?.code === 'invalid_json' ? 'Request body must contain valid JSON.'
           : status === 400 ? 'Request must contain one JSON-RPC object.'
           : status === 408 ? 'Request timed out or was cancelled.'
           : 'Unable to process the request.';
-        jsonError(res, status, message);
+        const headers = isOAuth && status === 401 ? oauthChallenge
+          : error instanceof OAuthExchangeError && error.retryAfter !== null
+            ? { 'retry-after': String(error.retryAfter) } : {};
+        jsonError(res, status, message, headers,
+          error instanceof OAuthExchangeError ? { limit_reason: null } : {});
       }
     } finally {
+      await Promise.allSettled([...pendingFetches]);
       clearTimeout(timer);
       req.off('aborted', abort);
       activeByKey.delete(keyDigest);
+      if (accountDigest) activeByAccount.delete(accountDigest);
       activeTotal -= 1;
     }
   });

@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 const API_BASE = 'https://therundown.io/api/v2';
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
@@ -455,12 +456,12 @@ async function readBoundedJson(response, maxBytes = MAX_RESPONSE_BYTES) {
 // fixed HTTPS origin and reads its key only from the process environment.
 // A key is not required to inspect the server's public MCP metadata. Product
 // calls themselves fail before any network activity when it is absent.
-export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetchImpl = fetch, timeoutMs = 15000 } = {}) {
+export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetchImpl = fetch, timeoutMs = 15000, oauthSecurity = false } = {}) {
   if (apiKey !== undefined && apiKey !== null && (typeof apiKey !== 'string' || /[\r\n]/.test(apiKey))) {
     throw new Error('Set THERUNDOWN_API_KEY in the MCP process environment.');
   }
   apiKey = typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : undefined;
-  const server = new McpServer({ name: 'therundown-data', version: '0.2.3' }, {
+  const server = new McpServer({ name: 'therundown-data', version: '0.3.0' }, {
     instructions: AGENT_BRIEF,
   });
   server.registerResource('brief', 'therundown://brief', {
@@ -469,6 +470,7 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
     mimeType: 'text/markdown',
   }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: 'text/markdown', text: AGENT_BRIEF }] }));
   let active = false;
+  const oauthTools = [];
   const encodedKey = apiKey ? encodeURIComponent(apiKey) : null;
   const percentEncodingPattern = (value) => new RegExp(value.split(/(%[0-9A-F]{2})/).map((part) => {
     if (/^%[0-9A-F]{2}$/.test(part)) {
@@ -539,13 +541,22 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
   }
 
   function tool(name, description, inputSchema, handler) {
-    server.registerTool(name, {
+    const config = {
       title: TOOL_TITLES[name],
       description,
       inputSchema: z.object(inputSchema).strict(),
       outputSchema: toolOutputs[name],
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    }, async (args, extra) => {
+      ...(oauthSecurity ? { _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['mcp:read'] }] } } : {}),
+    };
+    if (oauthSecurity) oauthTools.push({
+      name, ...config,
+      inputSchema: z.toJSONSchema(config.inputSchema, { target: 'draft-7', io: 'input' }),
+      outputSchema: z.toJSONSchema(config.outputSchema, { target: 'draft-7', io: 'output' }),
+      execution: { taskSupport: 'forbidden' },
+      securitySchemes: config._meta.securitySchemes,
+    });
+    server.registerTool(name, config, async (args, extra) => {
       try {
         const output = await handler(args, extra.signal);
         // Even unexpected upstream echo content cannot expose the configured key.
@@ -708,6 +719,9 @@ export function createDataServer({ apiKey = process.env.THERUNDOWN_API_KEY, fetc
         include_settled: args.include_settled, cursor_provided: args.cursor !== undefined });
   });
 
+  // Use the SDK's public underlying Server API for the ChatGPT descriptor
+  // extension; SDK call validation and tool dispatch remain unchanged.
+  if (oauthSecurity) server.server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: oauthTools }));
   return server;
 }
 

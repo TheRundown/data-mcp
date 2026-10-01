@@ -12,11 +12,11 @@ The separate [HTTP adapter](HOSTED.md) implements the hosted endpoint at
 `https://mcp.therundown.io/mcp`. It is excluded from the local ZIP and is
 never started by `npm start`; the ZIP remains a local, stdio-only install.
 
-The checked-out source is version **0.2.3**. Clients can initialize, list the six
+The checked-out source is version **0.3.0**. Clients can initialize, list the six
 tools and public resources, and read `therundown://brief` before a Product API key
 is configured. Tool definitions now include human-readable titles and object-root
 output schemas. Product tool calls still require a key and fail before any network
-request when it is absent. The published source ZIP is version 0.2.3.
+request when it is absent. The published source ZIP remains version 0.2.3. Source 0.3.0 adds a separate OAuth account-linking candidate; see [HOSTED.md](HOSTED.md) for its backend and deployment prerequisites. OAuth availability has not yet been established.
 
 Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.3.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.3.sha256), and extract it. The official ZIP is 41,072 bytes and its SHA-256 is `cb0a0841aa040f049ffddec5b5fa2436cb9de721a30a3bd53270132db7204025`. The [ZIP manifest](releases/0.2.3/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
 
