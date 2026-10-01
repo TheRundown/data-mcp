@@ -68,11 +68,72 @@ Discovering tools does not validate a key or establish any entitlement. All
 anonymous discovery requests share one per-process concurrency identity and
 remain subject to the process and request limits above.
 
-This adapter uses explicitly configured Product API keys, not OAuth access
-tokens. It does not advertise OAuth discovery or automatic account linking.
-The local ZIP exporter excludes this file and the HTTP listener; starting
-`server.mjs` continues to use stdio only. Network access is still needed for
-Product API reads.
+## OAuth account connection
+
+This section describes the 0.3.0 candidate. The OAuth route requires the matching
+authorization service and Product gateway changes, operator secret configuration,
+and live acceptance before it can be advertised as available.
+
+The separate `POST /oauth/mcp` route supports per-user account connection for
+ChatGPT and other OAuth clients. Its protected resource is exactly
+`https://mcp.therundown.io/oauth/mcp`, authorization server is
+`https://auth.therundown.io`, and required scope is `mcp:read`. Clients use a
+preregistered OAuth client and the authorization server's metadata; this adapter
+does not implement dynamic client registration. Its six tool descriptors
+advertise `oauth2` with scope `mcp:read` at the top level and in `_meta`.
+
+An operator enables this route with a secret injected into
+`THERUNDOWN_MCP_EXCHANGE_SECRET`. The protected resource metadata is available
+at `GET /.well-known/oauth-protected-resource/oauth/mcp` when enabled. Missing
+or invalid OAuth authentication returns `401` with a `WWW-Authenticate`
+challenge pointing to that metadata. Without the exchange secret, OAuth data
+requests return `503` and protected resource metadata returns `404`.
+The secret must never be placed in source, client configuration, or a URL.
+
+OAuth data requests send exactly one header:
+
+```http
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+```
+
+This route rejects Product key headers, credential aliases, duplicate headers,
+and requests that combine credential forms. It never falls back to raw Product
+key authentication. The existing `/` and `/mcp` routes continue to use Product
+keys as described above. Anonymous initialization, tool and resource listing,
+and the exact brief resource are available on the enabled OAuth route and do
+not contact either upstream service.
+
+For every protected OAuth request, the adapter makes one server-side request
+to the fixed HTTPS endpoint `https://auth.therundown.io/mcp/exchange/`, carrying
+the bearer token, service secret, and exact resource. Citizen validates the live
+grant and selected account and returns a signed `mcp1.` Product credential,
+account identity, expiry, scope, and resource. The adapter requires the exact
+five-field response, a 32-character UUID hex account identity, and an unexpired
+credential with at most 60 seconds remaining (five seconds allowed for clock
+skew). The credential is `mcp1.` followed by the canonical base64url encoding
+of the complete signed blob, with a maximum total length of 4096 characters.
+Exchange responses are limited to 16 KiB. Only the delegated credential
+is sent to Product, in `X-TheRundown-Key`; OAuth tokens and the exchange service
+secret are never sent to Product.
+
+There is no token or credential cache, queue, automatic retry, or redirect
+following. The request body, exchange, and Product operation share the same
+total request deadline and cancellation handling. Admission limits each bearer
+token to one active request before exchange. After successful exchange, an
+account guard prevents multiple tokens for the same account from performing
+concurrent Product work. Process capacity applies across both authentication
+routes; maps contain only digests and are cleared after upstream work settles.
+
+Exchange `401`, `403`, and `429` failures retain their HTTP status with sanitized
+messages; a bounded numeric `Retry-After` from an exchange `429` is preserved.
+Unavailable, redirected, malformed, incorrectly scoped, expired, or
+oversized responses return `503`. Exchange errors never expose response bodies,
+tokens, delegated credentials, or the service secret. Product entitlements,
+usage, and errors still come from the existing six tools and Product API.
+
+The local ZIP exporter excludes the HTTP listener and OAuth exchange helper;
+starting `server.mjs` continues to use stdio only. Network access is still
+needed for Product API reads.
 
 ## Container packaging
 

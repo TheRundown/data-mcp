@@ -150,7 +150,7 @@ test('SDK discovery lists all tools and preserves usage metadata', async () => {
       headers: { 'X-Datapoints': '0', 'X-Data-Delay-Seconds': '0' },
     });
   }, async (client) => {
-    assert.deepEqual(client.getServerVersion(), { name: 'therundown-data', version: '0.2.3' });
+    assert.deepEqual(client.getServerVersion(), { name: 'therundown-data', version: '0.3.0' });
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map((tool) => tool.name), [
       'list_sports', 'list_affiliates', 'list_markets', 'list_events', 'get_main_lines', 'list_futures',

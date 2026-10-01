@@ -1,4 +1,4 @@
-# Official TheRundown Data MCP 0.2.3
+# Official TheRundown Data MCP 0.3.0
 
 This is the official local, read-only Data MCP from
 [TheRundown/data-mcp](https://github.com/TheRundown/data-mcp).
@@ -25,7 +25,7 @@ code, not a `.mcpb` extension or published npm package:
   "mcpServers": {
     "therundown-data": {
       "command": "/absolute/path/to/node",
-      "args": ["/absolute/path/to/therundown-data-mcp-0.2.3/server.mjs"],
+      "args": ["/absolute/path/to/therundown-data-mcp-0.3.0/server.mjs"],
       "env": { "THERUNDOWN_API_KEY": "YOUR_API_KEY" }
     }
   }
