@@ -2,6 +2,7 @@ name: Offline CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -13,9 +14,132 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm test
+
+  adapter-artifact:
+    needs: test
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Build the exact reviewed ARM64 source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(uname -m)" = aarch64
+          df -P . | awk 'NR == 2 {gsub(/%/, "", $5); if ($5 >= 80) exit 1}'
+          VERSION=$(node -p 'require("./package.json").version')
+          docker build --pull --platform linux/arm64 \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$SOURCE_SHA" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --tag "data-mcp-ci:$SOURCE_SHA" .
+      - name: Verify packaged modules and anonymous discovery offline
+        run: |
+          set -euo pipefail
+          mkdir artifact
+          timeout 30s docker run --rm --network none --interactive --entrypoint node \
+            "data-mcp-ci:$SOURCE_SHA" --input-type=module > artifact/container-check.json <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+          import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+          import { createDataServer, TOOL_NAMES } from './server.mjs';
+          import { createHostedServer } from './hosted.mjs';
+          const files = ['package.json', 'package-lock.json', 'server.mjs', 'hosted.mjs',
+            'oauth.mjs', 'product-api.mjs', 'product-operations.json', 'live-stream.mjs', 'public-response.mjs'];
+          const files_sha256 = Object.fromEntries(files.map((name) => [name,
+            createHash('sha256').update(readFileSync(name)).digest('hex')]));
+          const version = JSON.parse(readFileSync('package.json')).version;
+          assert.equal(process.arch, 'arm64');
+          const server = createDataServer({ apiKey: null, oauthSecurity: true,
+            fetchImpl: () => { throw new Error('Unexpected network call'); } });
+          const hosted = createHostedServer({ publicOrigin: 'http://127.0.0.1',
+            fetchImpl: () => { throw new Error('Unexpected network call'); } });
+          const client = new Client({ name: 'ci-container-check', version: '1.0.0' }, { capabilities: {} });
+          const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+          try {
+            await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+            assert.equal(client.getServerVersion().version, version);
+            const { tools } = await client.listTools();
+            assert.deepEqual(tools.map(({ name }) => name), TOOL_NAMES);
+            for (const tool of tools) {
+              // SDK parsing retains the standard _meta extension, but removes
+              // the ChatGPT-specific top-level field checked by hosted tests.
+              assert.deepEqual(tool._meta.securitySchemes, [{ type: 'oauth2', scopes: ['mcp:read'] }]);
+              assert.equal(tool.annotations.readOnlyHint, true);
+              assert.equal(tool.outputSchema.type, 'object');
+            }
+            process.stdout.write(JSON.stringify({ version, tool_count: tools.length,
+              tool_names: TOOL_NAMES, files_sha256, network: 'none' }) + '\n');
+          } finally {
+            await Promise.allSettled([client.close(), server.close()]);
+            hosted.close();
+          }
+          NODE
+      - name: Export the validated image and provenance
+        run: |
+          set -euo pipefail
+          docker image inspect "data-mcp-ci:$SOURCE_SHA" > "$RUNNER_TEMP/data-mcp-image-inspect.json"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          image = json.loads(pathlib.Path(os.environ['RUNNER_TEMP'], 'data-mcp-image-inspect.json').read_text())[0]
+          check = json.loads(pathlib.Path('artifact/container-check.json').read_text())
+          labels = image['Config']['Labels']
+          assert image['Architecture'] == 'arm64' and image['Os'] == 'linux'
+          assert image['Size'] <= 1024 ** 3, 'Image export exceeds the one GiB bound'
+          assert labels['org.opencontainers.image.revision'] == os.environ['SOURCE_SHA']
+          assert labels['org.opencontainers.image.version'] == check['version']
+          for name, digest in check['files_sha256'].items():
+              assert hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() == digest, name
+          source_files = dict(check['files_sha256'])
+          for name in ['Dockerfile', '.dockerignore', '.github/workflows/ci.yml']:
+              source_files[name] = hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()
+          receipt = {'repository': os.environ['GITHUB_REPOSITORY'], 'source_sha': os.environ['SOURCE_SHA'],
+              'workflow_sha': os.environ['GITHUB_SHA'], 'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'], 'event': os.environ['GITHUB_EVENT_NAME'],
+              'image_id': image['Id'], 'image_tag': 'data-mcp-ci:' + os.environ['SOURCE_SHA'],
+              'platform': 'linux/arm64', 'version': check['version'], 'image_size': image['Size'],
+              'tool_count': check['tool_count'], 'source_files_sha256': source_files,
+              'registry_push': False, 'runtime_mutation': False}
+          pathlib.Path('artifact/provenance.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          PY
+          df -P . | awk 'NR == 2 {gsub(/%/, "", $5); if ($5 >= 80) exit 1}'
+          docker save "data-mcp-ci:$SOURCE_SHA" | gzip -n > artifact/image.tar.gz
+          (cd artifact && sha256sum image.tar.gz > image.tar.gz.sha256)
+      - name: Upload immutable ARM64 adapter artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-mcp-arm64-${{ env.SOURCE_SHA }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Record artifact identity
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          {
+            echo "ARM64 artifact ID: $ARTIFACT_ID"
+            echo "GitHub artifact SHA-256: $ARTIFACT_DIGEST"
+            echo "Artifact URL: $ARTIFACT_URL"
+            echo "Source commit: $SOURCE_SHA"
+            echo 'Promotion to ECR and runtime release require separate owning-desk verification.'
+          } >> "$GITHUB_STEP_SUMMARY"

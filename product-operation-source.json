@@ -1,0 +1,4605 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "docs_url": "https://docs.therundown.io/openapi.yaml",
+    "docs_commit": "516212535055593d1d2f13ef0408b7f78f80b7d2",
+    "docs_sha256": "edd59e33c1b0245f73a33b103d0279f60af0ad7ac88e9231ec827528a166e785",
+    "gateway_contract_commit": "6be5e9b589408ddb6d701ace046ec367d284f59a",
+    "gateway_routes_sha256": "93e9cf640d39fd0577d2ed3e89d5dcbaefe12464f392ba2144b32913fe27443d"
+  },
+  "operations": [
+    {
+      "operationId": "v2GetDelta",
+      "method": "GET",
+      "path": "/api/v2/delta",
+      "summary": "Get event changes since a delta ID",
+      "description": "Returns raw JSON delta payloads for events that changed since `last_id`. Each delta entry is a raw JSON string containing the full event update \u2014 the `data` field is a serialized JSON string, not a parsed object.\n\nThe response is wrapped in a `meta` object containing the `delta_last_id` cursor for subsequent polling.\n",
+      "parameters": [
+        {
+          "name": "last_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 36,
+            "maxLength": 36
+          },
+          "description": "Delta cursor (36-character UUID). Use `00000000-0000-0000-0000-000000000000` for initial fetch, then pass the `delta_last_id` from the previous response."
+        },
+        {
+          "name": "sport_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Filter by sport ID"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetAllStats",
+      "method": "GET",
+      "path": "/api/v2/stats",
+      "summary": "List all stat definitions",
+      "description": "",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Filter by stat ID"
+        },
+        {
+          "name": "sport_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Filter by sport ID"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetStatsSample",
+      "method": "GET",
+      "path": "/api/v2/stats/sample",
+      "summary": "Get a fixed complete-game stats sample",
+      "description": "Returns a static, marked sample game box for schema and parsing tests.\nIt requires an API key but consumes zero data points. It is not a\nproduction-data entitlement and must not be polled.\n",
+      "parameters": [],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetStatsByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/stats",
+      "summary": "Get team game stats for an event",
+      "description": "",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "stats_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated stat IDs (max 12)"
+        },
+        {
+          "name": "team_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Filter by team ID"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetPlayerStatsByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/players/stats",
+      "summary": "Get player game stats for an event",
+      "description": "",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "stats_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated stat IDs (max 12)"
+        },
+        {
+          "name": "player_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated player IDs (max 6)"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetAllMarkets",
+      "method": "GET",
+      "path": "/api/v2/markets",
+      "summary": "List all market definitions",
+      "description": "Returns all canonical market definitions with IDs, names, period info, and whether the line value represents a participant.",
+      "parameters": [],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [
+        "list_markets"
+      ],
+      "baseline_actions": "listMarketDefinitions"
+    },
+    {
+      "operationId": "v2GetMarketsDelta",
+      "method": "GET",
+      "path": "/api/v2/markets/delta",
+      "summary": "Get market price changes since a given ID",
+      "description": "Returns market line price changes (new, updated, closed) since the specified `last_id`. Use for efficient polling.\n\n**Bootstrap flow:** On known zero-delay access, call `GET /api/v2/sports/{sportID}/events/{date}` with the snapshot scope you need. Use its positive whole-integer `meta.delta_last_id` only when that response explicitly reports `X-Data-Delay-Seconds: 0`, then pass it as `last_id`. If the header is positive, absent, or invalid, keep using scoped snapshots; do not substitute `0`.\n\n**Staleness guard:** Cursors older than 30 minutes are rejected with HTTP 400. After a cursor error, take at most one fresh scoped snapshot and resume only when it meets the same zero-delay and valid-cursor conditions. Do not loop bootstrap requests.\n\n**Core live markets:** Event snapshots expand `market_ids=1,2,3` to include in-play IDs. This delta endpoint filters IDs literally, so poll `1,2,3,41,42,43` to receive full-game core updates before and during play. Returned rows retain their actual market IDs.\n",
+      "parameters": [
+        {
+          "name": "last_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "description": "Return changes with ID greater than this value. On known zero-delay access, obtain a positive whole-integer initial cursor from `meta.delta_last_id` in a scoped v2 events snapshot that explicitly reports `X-Data-Delay-Seconds: 0`. Cursors older than 30 minutes are rejected; do not use `0` as a fallback."
+        },
+        {
+          "name": "sport_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Filter by sport ID"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Literal comma-separated market-ID filter. To poll full-game core updates before and during play, include `1,2,3,41,42,43`; event snapshots expand `1,2,3` to include the in-play IDs."
+        },
+        {
+          "name": "event_id",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Filter by event ID"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 1000,
+            "maximum": 5000
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetMarketLinePriceHistory",
+      "method": "GET",
+      "path": "/api/v2/markets/history",
+      "summary": "Get price history for specific market line prices",
+      "description": "",
+      "parameters": [
+        {
+          "name": "market_line_price_ids",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated market line price IDs (max 50)"
+        },
+        {
+          "name": "from",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": "Start time (RFC3339)"
+        },
+        {
+          "name": "to",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": "End time (RFC3339)"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 1000,
+            "maximum": 5000
+          }
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "When `true`, return only history rows (or chart points) that were the sportsbook's main line when written \u2014 `is_main_line` = true on history rows, `m` = true on chart points. Sorted by time, each change of the line value for a participant is a main-line move at that timestamp."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetMarketsParticipants",
+      "method": "GET",
+      "path": "/api/v2/markets/participants",
+      "summary": "Get market participants",
+      "description": "Lists teams, players, or result sides for the requested event and markets. Use `participant_id` from this response, rather than `id`, to filter a participant-specific chart. Market `3` totals use `TYPE_RESULT` Over and Under participants, while markets `1` and `2` use `TYPE_TEAM` participants. For example, discover totals with `GET /api/v2/markets/participants?event_id=733a06aa4f4f2a3af7872c3667a60f22&market_ids=3&participant_type=TYPE_RESULT`, then request each discovered side from `GET /api/v2/events/{eventID}/markets/{marketID}/history`.",
+      "parameters": [
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "1,2,3"
+          },
+          "description": "Comma-separated market IDs. Defaults to `1,2,3` when omitted."
+        },
+        {
+          "name": "event_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID that scopes participant discovery."
+        },
+        {
+          "name": "participant_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated public canonical participant IDs to return."
+        },
+        {
+          "name": "participant_type",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "TYPE_TEAM",
+              "TYPE_PLAYER",
+              "TYPE_RESULT"
+            ]
+          },
+          "description": "Filter by participant type."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetTeamByID",
+      "method": "GET",
+      "path": "/api/v2/teams/{teamID}/",
+      "summary": "Get a team by ID",
+      "description": "",
+      "parameters": [
+        {
+          "name": "teamID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Normalized team ID"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetPlayersByTeam",
+      "method": "GET",
+      "path": "/api/v2/teams/{teamID}/players",
+      "summary": "Get players for a team",
+      "description": "",
+      "parameters": [
+        {
+          "name": "teamID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Normalized team ID"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetTeamStats",
+      "method": "GET",
+      "path": "/api/v2/teams/{teamID}/stats",
+      "summary": "Get season stats for a team",
+      "description": "",
+      "parameters": [
+        {
+          "name": "teamID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "stats_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated stat IDs (max 12)"
+        },
+        {
+          "name": "year",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Season year (defaults to current year)"
+        },
+        {
+          "name": "season_type",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "2"
+          },
+          "description": "Season type ID (default 2 = regular season)"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetPlayerStatsByTeam",
+      "method": "GET",
+      "path": "/api/v2/teams/{teamID}/players/stats",
+      "summary": "Get player season stats for a team",
+      "description": "",
+      "parameters": [
+        {
+          "name": "teamID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "stats_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated stat IDs (max 12)"
+        },
+        {
+          "name": "player_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated player IDs"
+        },
+        {
+          "name": "year",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Season year (defaults to current year)"
+        },
+        {
+          "name": "season_type",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "2"
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetPlayerByID",
+      "method": "GET",
+      "path": "/api/v2/players/{playerID}",
+      "summary": "Get a player by ID",
+      "description": "",
+      "parameters": [
+        {
+          "name": "playerID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetSports",
+      "method": "GET",
+      "path": "/api/v2/sports",
+      "summary": "List all sports",
+      "description": "Returns all available sports with their IDs. No authentication required.",
+      "parameters": [],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [
+        "list_sports"
+      ],
+      "baseline_actions": "listSports"
+    },
+    {
+      "operationId": "v2GetDatesBySportIDs",
+      "method": "GET",
+      "path": "/api/v2/sports/dates",
+      "summary": "Get available dates for multiple sports",
+      "description": "Returns dates with events for the specified sport IDs.",
+      "parameters": [
+        {
+          "name": "sport_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sport IDs"
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "format",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "iso8601",
+            "enum": [
+              "iso8601",
+              "epoch"
+            ]
+          },
+          "description": "Date format \u2014 `iso8601` returns date strings, `epoch` returns Unix timestamps"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetMarketsByDate",
+      "method": "GET",
+      "path": "/api/v2/sports/markets/{date}",
+      "summary": "Get available markets by date",
+      "description": "Returns available market definitions for each sport on the given date.",
+      "parameters": [
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "hide_closed_markets",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "1"
+            ]
+          },
+          "description": "Set to `1` to hide closed markets"
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetEventsByDate",
+      "method": "GET",
+      "path": "/api/v2/sports/events/{date}",
+      "summary": "Get events across sports for a date",
+      "description": "Returns schedule listing dates grouped by sport (`sport_id` \u2192 date strings) for the given date.",
+      "parameters": [
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "sport_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sport IDs"
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetTeamsBySport",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/teams",
+      "summary": "Get teams for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetEventsBySportAndDate",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/events/{date}",
+      "summary": "Get events with markets for a sport and date",
+      "description": "Returns events with full market/odds data for the specified sport and date. This is the primary endpoint for building odds screens.\n\n`main_line=true` also excludes closed prices while selecting main lines.\n\nFor known zero-delay access, this response's positive whole-integer `meta.delta_last_id` can bootstrap `/api/v2/markets/delta` only when this response explicitly reports `X-Data-Delay-Seconds: 0`. If that header is positive, absent, or invalid, use scoped snapshots instead; do not start market-delta polling with `0`.\n",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "1,2,3"
+          },
+          "description": "Comma-separated market IDs. Defaults to `1,2,3` (Moneyline, Spread, Total); for soccer leagues and NHL the default is `1,2,3,563`. The soccer 3-way moneyline (home/draw/away) is served on market 1 as three participants; market 563 carries the NHL 60-minute regulation-time line.\n**Limit: 12 market IDs per request.** Requests with more than 12 IDs are rejected with a `400` \u2014 split larger requests into batches of 12, or omit the parameter to use the default.\nOn market-definition endpoints (`/api/v2/events/{eventID}/markets`, `/api/v2/sports/{sportID}/markets/{date}`), omitting `market_ids` returns all available market definitions instead of the default set.\nCommon IDs: 1=Moneyline, 2=Spread, 3=Total, 29=Player Points, 35=Player Rebounds, 38=Three Pointers, 39=Player Assists, 93=Player PRA, 94=Team Totals.\nLive variants: 41=Live ML, 42=Live Spread, 43=Live Total.\n"
+        },
+        {
+          "name": "participant_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated participant IDs to filter (max 99)"
+        },
+        {
+          "name": "participant_type",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "TYPE_TEAM",
+              "TYPE_PLAYER",
+              "TYPE_RESULT"
+            ]
+          },
+          "description": "Filter participants by type"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Only return main lines (primary odds, not alternates). On opening and closing endpoints, this selects main lines in the snapshot. Use history to follow which line was main at each timestamp."
+        },
+        {
+          "name": "hide_closed",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Exclude currently closed lines when `true`. Omit or set `false` to retrieve completed historical snapshots; an event can remain when no prices match."
+        },
+        {
+          "name": "hide_no_markets",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Hide events with no market data"
+        },
+        {
+          "name": "event_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to include (e.g. `STATUS_IN_PROGRESS,STATUS_HALFTIME`). Applied before `exclude_status`."
+        },
+        {
+          "name": "exclude_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to exclude"
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          },
+          "description": "Source-supported period inclusion flag; normal plan/live-period entitlement enforcement still applies. Existing Data MCP uses all_periods.",
+          "source": "pkg/lines/line_dal.go:1264; pkg/events/v2.go:249"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [
+        "list_events"
+      ],
+      "baseline_actions": "listEvents"
+    },
+    {
+      "operationId": "v2GetDatesBySportID",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/dates",
+      "summary": "Get available dates for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "format",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "iso8601",
+            "enum": [
+              "iso8601",
+              "epoch"
+            ]
+          },
+          "description": "Date format \u2014 `iso8601` returns date strings, `epoch` returns Unix timestamps"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": "listSportDates"
+    },
+    {
+      "operationId": "v2GetDivisionsBySport",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/divisions",
+      "summary": "Get divisions for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetConferencesBySport",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/conferences",
+      "summary": "Get conferences for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetFuturesForSport",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/futures",
+      "summary": "Get futures for a sport",
+      "description": "Returns futures/outright **competition events** (e.g. tournament winner) for a sport, with future-class markets in the standard V2 market \u2192 participants \u2192 lines \u2192 prices shape and per-market settlement state. Competition events are excluded from the dated game endpoints and served only here. **Early access \u2014 requires an Ultra plan or higher.**\n\nA competition is an **interval**, not an instant: `event_date` is when it starts and `settle_by` is when it must have graded. Futures events carry no `teams` array and no score \u2014 the human-readable identity is `schedule.event_name`.\n\n**Date filtering uses interval overlap.** An event is returned when its `[event_date, settle_by]` span intersects the requested window \u2014 `settle_by >= from` and `event_date <= to`. So the default `from=now` means \"in flight right now\" and matches a season future that started months ago.\n\n**Paging is keyset-based** (no skip parameter). When more results exist the response carries `meta.next_cursor`; pass it back verbatim as `cursor`. Ordering is soonest-to-resolve first: `settle_by`, then `event_date`, then `event_id`. `meta.count` is the number of events on the page, `meta.has_more` says whether another page exists, and `meta.total` is the number of events matching your filters across all pages, so a single call tells you the size of the listing.\n\n**Default visibility:** settled markets are removed per market, an event is hidden once every requested future-class market on it has settled, and terminal (final/canceled/abandoned) events are excluded. `include_settled=true` lifts all of those **and** the default `from=now`, so settled history is reachable.\n\n**Delta bootstrap:** On known zero-delay access, `meta.delta_last_id` can seed `GET /api/v2/markets/delta` only when this snapshot explicitly reports `X-Data-Delay-Seconds: 0`; it is a positive whole-integer cursor. With a positive, absent, or invalid delay header, keep using scoped snapshots and do not substitute `0`. Futures market IDs are **not** in the delta feed's default set \u2014 pass them explicitly (e.g. `market_ids=1141`) when polling. See the [Futures guide](/guides/futures) for the full integration recipe.\n",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "from",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Start of the window. A competition is returned when its `settle_by` is at or after this \u2014 i.e. it has not finished yet. RFC3339 timestamp or `YYYY-MM-DD`; date-only values use the `offset` timezone. Defaults to **now**, with two exceptions where it is left unbounded instead: when `include_settled=true` (so settled history, whose intervals ended in the past, stays reachable), and when an explicit `to` is itself already in the past (defaulting `from` to now would describe an inverted, always-empty window)."
+        },
+        {
+          "name": "to",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "End of the window. A competition is returned when its `event_date` (start) is at or before this. RFC3339 timestamp or `YYYY-MM-DD`, inclusive; date-only values use the `offset` timezone. Unbounded when omitted."
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 50,
+            "maximum": 200
+          },
+          "description": "Maximum events returned per page (values above 200 are clamped to 200)."
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Opaque keyset page token. Pass `meta.next_cursor` from the previous response verbatim; omit for the first page. Do not parse or construct the token."
+        },
+        {
+          "name": "include_settled",
+          "in": "query",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          },
+          "description": "Set to `true` to include settled markets (with their graded `settlement` entries) and terminal (finished/canceled) competition events. Also lifts the default `from=now`, so settled history is reachable \u2014 add explicit `from`/`to` bounds to scope it."
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated market IDs, intersected with the future-class market set (1141 = Tournament Winner on every futures sport; golf adds 1392\u20131396). When omitted, all future-class markets are returned. Game-market IDs match no markets here (events still return, with empty markets arrays)."
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [
+        "list_futures"
+      ],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetFuturesEventByID",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/futures/{eventID}",
+      "summary": "Get one futures competition, with progress and leaders",
+      "description": "Returns **one** futures/outright competition event \u2014 the same envelope and event object shape as `GET /api/v2/sports/{sportID}/futures` (`meta.delta_last_id`, `events` with a single event carrying `event_id`, `sport_id`, `event_date`, `settle_by`, `event_status`, `settlement`, `schedule`, `markets`) \u2014 plus up to three optional detail-only keys not served on the listing. **Early access \u2014 requires an Ultra plan or higher.**\n\n**`progress`** \u2014 the competition's live non-odds state (a golf leaderboard, a team-sport standings table), refreshed on its own cycle independent of the odds board. `entries[].participant_id` is the same participant ID space `markets[].participants[].id` uses, so a progress row joins directly to a price. Omitted entirely (never `null`) when no progress document exists yet for the competition \u2014 \"priced, no odds-board progress\" is the normal state for a fresh team-championship board, not a degraded response. See [Competition Stats (Progress)](/guides/futures#competition-stats-progress) for the full field-by-field breakdown of both kinds live today.\n\n**`leaders`** / **`player_leaders`** \u2014 optional curated season-stats leaderboards, team-grain and player-grain respectively, for a hand-verified set of sports. Both reuse the same `{stat, stat_id, season_year, entries[]}` shape and are omitted entirely (never an empty array) when the sport is not curated or no stat rows exist yet \u2014 see [Competition Stats (Progress)](/guides/futures#competition-stats-progress) for the curated sport list and the two distinct entry ID spaces.\n\n**Settled competitions are always served here.** Unlike the listing (which hides settled markets and terminal events unless `include_settled=true`), this is a deep link to a specific competition you already hold the ID for, and it keeps working after settlement, with the graded results visible in `settlement`. There is no `include_settled` parameter on this endpoint.\n",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated market IDs, intersected with the future-class market set. When omitted, all future-class markets are returned."
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetOpenersBySportAndDate",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/openers/{date}",
+      "summary": "Get opening lines for a sport and date",
+      "description": "Returns events with the earliest recorded price for each available line at each sportsbook. Opening snapshots are available whenever a price has been recorded, including before, during, or after an event.",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "1,2,3"
+          },
+          "description": "Comma-separated market IDs. Defaults to `1,2,3` (Moneyline, Spread, Total); for soccer leagues and NHL the default is `1,2,3,563`. The soccer 3-way moneyline (home/draw/away) is served on market 1 as three participants; market 563 carries the NHL 60-minute regulation-time line.\n**Limit: 12 market IDs per request.** Requests with more than 12 IDs are rejected with a `400` \u2014 split larger requests into batches of 12, or omit the parameter to use the default.\nOn market-definition endpoints (`/api/v2/events/{eventID}/markets`, `/api/v2/sports/{sportID}/markets/{date}`), omitting `market_ids` returns all available market definitions instead of the default set.\nCommon IDs: 1=Moneyline, 2=Spread, 3=Total, 29=Player Points, 35=Player Rebounds, 38=Three Pointers, 39=Player Assists, 93=Player PRA, 94=Team Totals.\nLive variants: 41=Live ML, 42=Live Spread, 43=Live Total.\n"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Only return main lines (primary odds, not alternates). On opening and closing endpoints, this selects main lines in the snapshot. Use history to follow which line was main at each timestamp."
+        },
+        {
+          "name": "event_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to include (e.g. `STATUS_IN_PROGRESS,STATUS_HALFTIME`). Applied before `exclude_status`."
+        },
+        {
+          "name": "exclude_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to exclude. Applied after `event_status`."
+        },
+        {
+          "name": "hide_closed",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Exclude currently closed lines when `true`. Omit or set `false` to retrieve completed historical snapshots; an event can remain when no prices match."
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          },
+          "description": "Source-supported period inclusion flag; normal plan/live-period entitlement enforcement still applies. Existing Data MCP uses all_periods.",
+          "source": "pkg/lines/line_dal.go:1264; pkg/events/v2.go:249"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetClosingBySportAndDate",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/closing/{date}",
+      "summary": "Get closing lines for a sport and date",
+      "description": "Returns events with the latest recorded price for each available line and sportsbook at or before each event's scheduled start time. Before an event starts, the snapshot is provisional. Period markets use the event start time as their closing cutoff.\n\nHistorical-data access and the event-date lookback depend on your plan. Omit `hide_closed` or use `false` to include currently closed prices in completed-event snapshots. Events can be returned without prices when no recorded lines match the filters. Use market history for price changes over time; see the [Historical Odds guide](/guides/historical-odds).\n",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "1,2,3"
+          },
+          "description": "Comma-separated market IDs. Defaults to `1,2,3` (Moneyline, Spread, Total); for soccer leagues and NHL the default is `1,2,3,563`. The soccer 3-way moneyline (home/draw/away) is served on market 1 as three participants; market 563 carries the NHL 60-minute regulation-time line.\n**Limit: 12 market IDs per request.** Requests with more than 12 IDs are rejected with a `400` \u2014 split larger requests into batches of 12, or omit the parameter to use the default.\nOn market-definition endpoints (`/api/v2/events/{eventID}/markets`, `/api/v2/sports/{sportID}/markets/{date}`), omitting `market_ids` returns all available market definitions instead of the default set.\nCommon IDs: 1=Moneyline, 2=Spread, 3=Total, 29=Player Points, 35=Player Rebounds, 38=Three Pointers, 39=Player Assists, 93=Player PRA, 94=Team Totals.\nLive variants: 41=Live ML, 42=Live Spread, 43=Live Total.\n"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Only return main lines (primary odds, not alternates). On opening and closing endpoints, this selects main lines in the snapshot. Use history to follow which line was main at each timestamp."
+        },
+        {
+          "name": "event_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to include (e.g. `STATUS_IN_PROGRESS,STATUS_HALFTIME`). Applied before `exclude_status`."
+        },
+        {
+          "name": "exclude_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to exclude. Applied after `event_status`."
+        },
+        {
+          "name": "hide_closed",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Exclude currently closed lines when `true`. Omit or set `false` to retrieve completed historical snapshots; an event can remain when no prices match."
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          },
+          "description": "Source-supported period inclusion flag; normal plan/live-period entitlement enforcement still applies. Existing Data MCP uses all_periods.",
+          "source": "pkg/lines/line_dal.go:1264; pkg/events/v2.go:249"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetMarketsBySportAndDate",
+      "method": "GET",
+      "path": "/api/v2/sports/{sportID}/markets/{date}",
+      "summary": "Get available markets for a sport and date",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "hide_closed_markets",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "1"
+            ]
+          },
+          "description": "Set to `1` to hide closed markets"
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [
+        "list_markets"
+      ],
+      "baseline_actions": "listSportDateMarkets"
+    },
+    {
+      "operationId": "v2GetBestOddsBySportAndDate",
+      "method": "GET",
+      "path": "/api/v2/sports/{sport_id}/odds/best-lines/{date}",
+      "summary": "Get Bulk Best Lines by Sport and Date",
+      "description": "Returns the best currently open sportsbook price for each matching\nevent/market/participant selection on a sport date. This is the\ncollection form of the event best-line endpoint and avoids making one\nrequest per event. By default it considers only main lines; set\ninclude_alternates=true to rank alternate and extended lines.\n",
+      "parameters": [
+        {
+          "name": "sport_id",
+          "in": "path",
+          "required": true,
+          "description": "Sport ID.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "description": "Event date in YYYY-MM-DD format or Unix epoch timestamp.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "market_id",
+          "in": "query",
+          "required": true,
+          "description": "Market ID to price.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "period_id",
+          "in": "query",
+          "description": "Market period. Defaults to the full-game period.",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        {
+          "name": "participant_id",
+          "in": "query",
+          "description": "Optional participant to price across all events on the date.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "participant_type",
+          "in": "query",
+          "description": "Participant type identifier.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "market_participant_id",
+          "in": "query",
+          "description": "Exact market participant row to price.",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        {
+          "name": "side",
+          "in": "query",
+          "description": "Use over or under to rank total-style markets by bettor-favorable line before price.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "over",
+              "under"
+            ]
+          }
+        },
+        {
+          "name": "line",
+          "in": "query",
+          "description": "Exact line to match. Omit to rank main lines by bettor-favorable line, then price.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include_alternates",
+          "in": "query",
+          "description": "Include alternate and extended lines in the ranking pool.",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "description": "Comma-separated sportsbook affiliate IDs to include.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include_all",
+          "in": "query",
+          "description": "Include ranked matching prices under each best-line row.",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        {
+          "name": "all_limit",
+          "in": "query",
+          "description": "Maximum ranked prices per best-line row when include_all=true.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25,
+            "default": 5
+          }
+        },
+        {
+          "name": "sample_limit",
+          "in": "query",
+          "description": "Maximum raw price rows to inspect before grouping.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000,
+            "default": 10000
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "description": "Maximum best-line rows to return.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 250
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": -840,
+            "maximum": 840,
+            "default": 0
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetSteamersBySportAndDate",
+      "method": "GET",
+      "path": "/api/v2/sports/{sport_id}/odds/steamers/{date}",
+      "summary": "Get Steamers by Sport and Date",
+      "description": "Returns open prices for a sport and event date whose implied\nprobability moved the most during the requested lookback window.\n",
+      "parameters": [
+        {
+          "name": "sport_id",
+          "in": "path",
+          "required": true,
+          "description": "Sport ID.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "description": "Event date in YYYY-MM-DD format or Unix epoch timestamp.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "description": "Minutes from UTC for timezone adjustment.",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        {
+          "name": "window_minutes",
+          "in": "query",
+          "description": "Lookback window for price movement.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120,
+            "default": 5
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "description": "Comma-separated sportsbook affiliate IDs to include.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "description": "Maximum prices to return.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetOutliersBySportAndDate",
+      "method": "GET",
+      "path": "/api/v2/sports/{sport_id}/odds/outliers/{date}",
+      "summary": "Get Bookmaker Outliers by Sport and Date",
+      "description": "Returns prices from one sportsbook that are most out of line with the\npeer-book consensus for matching event, market, period, participant,\nand line. The date scope keeps the query bounded and cacheable.\n",
+      "parameters": [
+        {
+          "name": "sport_id",
+          "in": "path",
+          "required": true,
+          "description": "Sport ID.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "description": "Event date in YYYY-MM-DD format or Unix epoch timestamp.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "affiliate_id",
+          "in": "query",
+          "required": true,
+          "description": "Sportsbook affiliate ID to compare against peer books.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "description": "Minutes from UTC for timezone adjustment.",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        {
+          "name": "min_peers",
+          "in": "query",
+          "description": "Minimum peer prices required to calculate consensus.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 2
+          }
+        },
+        {
+          "name": "sample_limit",
+          "in": "query",
+          "description": "Maximum candidate prices to inspect before ranking.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 1000
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "description": "Comma-separated sportsbook affiliate IDs allowed by the request.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "description": "Maximum outliers to return.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetAffiliates",
+      "method": "GET",
+      "path": "/api/v2/affiliates",
+      "summary": "List all sportsbooks/affiliates",
+      "description": "Returns currently published sportsbooks with IDs, names, URLs, and an integration `status` (`healthy`, `unhealthy`, or `beta`). Availability can vary by sport and market. No authentication required.\n",
+      "parameters": [
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "regions"
+            ]
+          },
+          "description": "Set to `regions` to include geographic region data"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [
+        "list_affiliates"
+      ],
+      "baseline_actions": "listAffiliates"
+    },
+    {
+      "operationId": "v2GetSportsbooks",
+      "method": "GET",
+      "path": "/api/v2/sportsbooks",
+      "summary": "List all sportsbooks (alias for /affiliates)",
+      "description": "",
+      "parameters": [
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "regions"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetSeasonTypes",
+      "method": "GET",
+      "path": "/api/v2/season_types",
+      "summary": "List season types per sport",
+      "description": "",
+      "parameters": [],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetPublicTournament",
+      "method": "GET",
+      "path": "/api/v2/public/tournament/{tournament}",
+      "summary": "Read public allowlisted tournament schedule and scores (no odds)",
+      "description": "",
+      "parameters": [
+        {
+          "name": "tournament",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "fifa"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "customer_route_and_handler",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetEventByID",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}",
+      "summary": "Get a single event with markets",
+      "description": "`main_line=true` also excludes closed prices while selecting main lines.",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "1,2,3"
+          },
+          "description": "Comma-separated market IDs. Defaults to `1,2,3` (Moneyline, Spread, Total); for soccer leagues and NHL the default is `1,2,3,563`. The soccer 3-way moneyline (home/draw/away) is served on market 1 as three participants; market 563 carries the NHL 60-minute regulation-time line.\n**Limit: 12 market IDs per request.** Requests with more than 12 IDs are rejected with a `400` \u2014 split larger requests into batches of 12, or omit the parameter to use the default.\nOn market-definition endpoints (`/api/v2/events/{eventID}/markets`, `/api/v2/sports/{sportID}/markets/{date}`), omitting `market_ids` returns all available market definitions instead of the default set.\nCommon IDs: 1=Moneyline, 2=Spread, 3=Total, 29=Player Points, 35=Player Rebounds, 38=Three Pointers, 39=Player Assists, 93=Player PRA, 94=Team Totals.\nLive variants: 41=Live ML, 42=Live Spread, 43=Live Total.\n"
+        },
+        {
+          "name": "participant_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated participant IDs to filter (max 99)"
+        },
+        {
+          "name": "participant_type",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "TYPE_TEAM",
+              "TYPE_PLAYER",
+              "TYPE_RESULT"
+            ]
+          },
+          "description": "Filter participants by type"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Only return main lines (primary odds, not alternates). On opening and closing endpoints, this selects main lines in the snapshot. Use history to follow which line was main at each timestamp."
+        },
+        {
+          "name": "hide_closed",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Exclude currently closed lines when `true`. Omit or set `false` to retrieve completed historical snapshots; an event can remain when no prices match."
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          },
+          "description": "Source-supported period inclusion flag; normal plan/live-period entitlement enforcement still applies. Existing Data MCP uses all_periods.",
+          "source": "pkg/lines/line_dal.go:1264; pkg/events/v2.go:249"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [
+        "get_main_lines"
+      ],
+      "baseline_actions": "getEventOdds"
+    },
+    {
+      "operationId": "v2GetEventOpeners",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/openers",
+      "summary": "Get opening prices for an event",
+      "description": "Returns the earliest recorded price for each available line at each sportsbook. Opening snapshots are available whenever a price has been recorded, including before, during, or after an event. The response always uses an `events` array, even for one event ID.",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "1,2,3"
+          },
+          "description": "Comma-separated market IDs. Defaults to `1,2,3` (Moneyline, Spread, Total); for soccer leagues and NHL the default is `1,2,3,563`. The soccer 3-way moneyline (home/draw/away) is served on market 1 as three participants; market 563 carries the NHL 60-minute regulation-time line.\n**Limit: 12 market IDs per request.** Requests with more than 12 IDs are rejected with a `400` \u2014 split larger requests into batches of 12, or omit the parameter to use the default.\nOn market-definition endpoints (`/api/v2/events/{eventID}/markets`, `/api/v2/sports/{sportID}/markets/{date}`), omitting `market_ids` returns all available market definitions instead of the default set.\nCommon IDs: 1=Moneyline, 2=Spread, 3=Total, 29=Player Points, 35=Player Rebounds, 38=Three Pointers, 39=Player Assists, 93=Player PRA, 94=Team Totals.\nLive variants: 41=Live ML, 42=Live Spread, 43=Live Total.\n"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Only return main lines (primary odds, not alternates). On opening and closing endpoints, this selects main lines in the snapshot. Use history to follow which line was main at each timestamp."
+        },
+        {
+          "name": "hide_closed",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Exclude currently closed lines when `true`. Omit or set `false` to retrieve completed historical snapshots; an event can remain when no prices match."
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          },
+          "description": "Source-supported period inclusion flag; normal plan/live-period entitlement enforcement still applies. Existing Data MCP uses all_periods.",
+          "source": "pkg/lines/line_dal.go:1264; pkg/events/v2.go:249"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetEventClosing",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/closing",
+      "summary": "Get closing prices for an event",
+      "description": "Returns the latest recorded price for each available line and sportsbook at or before the event's scheduled start time. Before the event starts, the snapshot is provisional. Period markets use the event start time as their closing cutoff. The response always uses an `events` array, even for one event ID.\n\nHistorical-data access and the event-date lookback depend on your plan. Omit `hide_closed` or use `false` to include currently closed prices in completed-event snapshots. The event can be returned without prices when no recorded lines match the filters.\n\nFor price changes over time, use `GET /api/v2/events/{eventID}/markets/history` or `GET /api/v2/events/{eventID}/markets/{marketID}/history`. See the [Historical Odds guide](/guides/historical-odds) for examples.\n",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "1,2,3"
+          },
+          "description": "Comma-separated market IDs. Defaults to `1,2,3` (Moneyline, Spread, Total); for soccer leagues and NHL the default is `1,2,3,563`. The soccer 3-way moneyline (home/draw/away) is served on market 1 as three participants; market 563 carries the NHL 60-minute regulation-time line.\n**Limit: 12 market IDs per request.** Requests with more than 12 IDs are rejected with a `400` \u2014 split larger requests into batches of 12, or omit the parameter to use the default.\nOn market-definition endpoints (`/api/v2/events/{eventID}/markets`, `/api/v2/sports/{sportID}/markets/{date}`), omitting `market_ids` returns all available market definitions instead of the default set.\nCommon IDs: 1=Moneyline, 2=Spread, 3=Total, 29=Player Points, 35=Player Rebounds, 38=Three Pointers, 39=Player Assists, 93=Player PRA, 94=Team Totals.\nLive variants: 41=Live ML, 42=Live Spread, 43=Live Total.\n"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Only return main lines (primary odds, not alternates). On opening and closing endpoints, this selects main lines in the snapshot. Use history to follow which line was main at each timestamp."
+        },
+        {
+          "name": "hide_closed",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "Exclude currently closed lines when `true`. Omit or set `false` to retrieve completed historical snapshots; an event can remain when no prices match."
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          },
+          "description": "Source-supported period inclusion flag; normal plan/live-period entitlement enforcement still applies. Existing Data MCP uses all_periods.",
+          "source": "pkg/lines/line_dal.go:1264; pkg/events/v2.go:249"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetAvailableMarketsByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/markets",
+      "summary": "Get available markets for an event",
+      "description": "Returns the list of market definitions available for this event (not prices \u2014 use the event endpoint with market_ids for prices).",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "participant_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated participant IDs to filter (max 99)"
+        },
+        {
+          "name": "participant_type",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "TYPE_TEAM",
+              "TYPE_PLAYER",
+              "TYPE_RESULT"
+            ]
+          },
+          "description": "Filter participants by type"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": "listEventMarkets"
+    },
+    {
+      "operationId": "v2GetMarketHistoryByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/markets/history",
+      "summary": "Get market price history for an event",
+      "description": "Returns recorded price changes for the requested markets and sportsbooks, subject to your plan's historical-data access. Data can be available before, during, or after an event as prices are recorded. Each response is bounded by the requested limit.",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated market IDs to filter. Defaults to `1,2,3`; maximum 12."
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "from",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": "Inclusive start time (RFC3339)"
+        },
+        {
+          "name": "to",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": "Inclusive end time (RFC3339)"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 1000,
+            "maximum": 5000
+          },
+          "description": "Maximum total rows across all requested markets and sportsbooks. Invalid or out-of-range values use 1000."
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "When `true`, return only history rows (or chart points) that were the sportsbook's main line when written \u2014 `is_main_line` = true on history rows, `m` = true on chart points. Sorted by time, each change of the line value for a participant is a main-line move at that timestamp."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetOpeningPricesByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/markets/opening",
+      "summary": "Get opening prices for an event's markets",
+      "description": "",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "market_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated market IDs"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetMarketLineHistoryByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/markets/{marketID}/history",
+      "summary": "Get line price chart data for a specific market",
+      "description": "Returns time-series price data suitable for charting line movement. To chart one participant, first discover its public `participant_id` with `GET /api/v2/markets/participants` for the same event and market, then pass that value here. For totals (market `3`), discover the `TYPE_RESULT` Over and Under participants and request each side separately. Series are grouped by affiliate and can otherwise contain points for more than one participant. `main_line=true` keeps only the points that were the main line when written.",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "marketID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Market ID"
+        },
+        {
+          "name": "participant_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Filter by the public canonical `participant_id` returned by `GET /api/v2/markets/participants` for this event and market. For totals (market `3`), use the discovered `TYPE_RESULT` Over or Under participant ID; do not substitute the participant record `id`."
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "line",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Filter by line value"
+        },
+        {
+          "name": "from",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": "Inclusive start time (RFC3339)"
+        },
+        {
+          "name": "to",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": "Inclusive end time (RFC3339)"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 1000,
+            "maximum": 5000
+          },
+          "description": "Maximum total points across all returned sportsbooks. Invalid or out-of-range values use 1000."
+        },
+        {
+          "name": "main_line",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          },
+          "description": "When `true`, return only history rows (or chart points) that were the sportsbook's main line when written \u2014 `is_main_line` = true on history rows, `m` = true on chart points. Sorted by time, each change of the line value for a participant is a main-line move at that timestamp."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetBestLineByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/best-line",
+      "summary": "Get best available line for an event",
+      "description": "Returns the best moneyline, spread, and total across all sportsbooks.",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "period",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "period_full_game",
+            "enum": [
+              "period_full_game",
+              "period_first_half",
+              "period_second_half",
+              "period_first_period",
+              "period_second_period",
+              "period_third_period",
+              "period_fourth_period",
+              "period_live_full_game",
+              "period_live_first_half",
+              "period_live_second_half",
+              "period_live_first_period",
+              "period_live_second_period",
+              "period_live_third_period",
+              "period_live_fourth_period"
+            ]
+          },
+          "description": "Period to get best line for"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetBestOddsByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{event_id}/odds/best-line",
+      "summary": "Get Best Available Line for an Event",
+      "description": "Returns the best currently open sportsbook price for one event market,\nplus the ranked matching prices. This endpoint is event-scoped, so no\ndate parameter is required.\n",
+      "parameters": [
+        {
+          "name": "event_id",
+          "in": "path",
+          "required": true,
+          "description": "The unique event ID.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "market_id",
+          "in": "query",
+          "required": true,
+          "description": "Market ID to price.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "period_id",
+          "in": "query",
+          "description": "Market period. Defaults to the full-game period.",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        {
+          "name": "participant_id",
+          "in": "query",
+          "description": "Participant to price.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "participant_type",
+          "in": "query",
+          "description": "Participant type identifier.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "market_participant_id",
+          "in": "query",
+          "description": "Exact market participant row to price.",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        {
+          "name": "side",
+          "in": "query",
+          "description": "Use over or under to rank total-style markets by bettor-favorable line before price.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "over",
+              "under"
+            ]
+          }
+        },
+        {
+          "name": "line",
+          "in": "query",
+          "description": "Exact line to match. Omit to allow main-line ranking.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include_alternates",
+          "in": "query",
+          "description": "Include alternate and extended lines.",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "description": "Comma-separated sportsbook affiliate IDs to include.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "description": "Maximum ranked prices to return.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetPlaysByEvent",
+      "method": "GET",
+      "path": "/api/v2/events/{eventID}/plays",
+      "summary": "Get play-by-play for an event",
+      "description": "Returns the play-by-play timeline for a live or completed event \u2014 one entry per play with description, period, game clock, running score, and (as attribution rolls out) the players involved. Live game state and play-by-play require an **Ultra plan or higher**; keys on lower tiers receive a `403`. The companion `live_game_state` snapshot (current inning/quarter, count, base runners, possession, and more) is embedded on live event payloads for entitled keys. Also available for streaming via the `plays` channel on the V2 WebSocket.\n",
+      "parameters": [
+        {
+          "name": "eventID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Canonical V2 event ID from the `event_id` field returned by event endpoints"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 50,
+            "maximum": 500
+          },
+          "description": "Number of plays to return. The most recent plays are selected, then returned in ascending `sequence` order. Values above 500 are capped."
+        },
+        {
+          "name": "before_sequence",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Pagination cursor \u2014 returns plays with `sequence` lower than this value. Use the lowest `sequence` from the previous page to walk backwards through long games."
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetHedgeOpportunities",
+      "method": "GET",
+      "path": "/api/v2/hedge",
+      "summary": "List Hedge Opportunities (v2)",
+      "description": "Returns current arbitrage/hedge opportunities across sportsbooks.",
+      "parameters": [
+        {
+          "name": "type",
+          "in": "query",
+          "description": "Opportunity type filter (e.g. mainlines, props)",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 20
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        {
+          "name": "event_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "market_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "min_percent",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include_closed",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "include_live",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetTopHedgeOpportunities",
+      "method": "GET",
+      "path": "/api/v2/hedge/top",
+      "summary": "List Top Hedge Opportunities (v2)",
+      "description": "Returns the top arbitrage/hedge opportunities by edge.",
+      "parameters": [
+        {
+          "name": "type",
+          "in": "query",
+          "description": "Opportunity type filter (e.g. mainlines, props)",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 20
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        {
+          "name": "event_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "market_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "min_percent",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include_closed",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "include_live",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetHedgeOpportunityByID",
+      "method": "GET",
+      "path": "/api/v2/hedge/{id}",
+      "summary": "Get a Hedge Opportunity by ID (v2)",
+      "description": "Returns one hedge opportunity from the selected opportunity type.\nIDs are unique within an opportunity type, not across every hedge type,\nso an ID copied from a non-mainlines feed must be requested with that\nfeed's concrete `type`. If omitted, `type` defaults to `mainlines` for\nbackwards compatibility. Only the enumerated generally available\nopportunity types are part of this public contract.\n",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "The numeric hedge opportunity ID",
+          "schema": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          }
+        },
+        {
+          "name": "type",
+          "in": "query",
+          "description": "The concrete opportunity type containing this ID; defaults to mainlines",
+          "schema": {
+            "type": "string",
+            "default": "mainlines",
+            "enum": [
+              "mainlines",
+              "props",
+              "3ways",
+              "middles",
+              "posev",
+              "openev"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetHedgeOpportunitiesByEvent",
+      "method": "GET",
+      "path": "/api/v2/hedge/event/{event_id}",
+      "summary": "List Hedge Opportunities for an Event (v2)",
+      "description": "Returns arbitrage/hedge opportunities for a specific event.",
+      "parameters": [
+        {
+          "name": "event_id",
+          "in": "path",
+          "required": true,
+          "description": "The unique event ID",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "type",
+          "in": "query",
+          "description": "Opportunity type filter (e.g. mainlines, props)",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 20
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        {
+          "name": "market_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "min_percent",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include_closed",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "include_live",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetBestOdds",
+      "method": "GET",
+      "path": "/api/v2/odds/best-line",
+      "summary": "Get best available line using event_id query",
+      "description": "Returns the best currently open sportsbook price for one event market,\nplus the ranked matching prices. This endpoint is event-scoped, so no\ndate parameter is required.\n",
+      "parameters": [
+        {
+          "name": "event_id",
+          "in": "query",
+          "required": true,
+          "description": "The unique event ID.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "market_id",
+          "in": "query",
+          "required": true,
+          "description": "Market ID to price.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "period_id",
+          "in": "query",
+          "description": "Market period. Defaults to the full-game period.",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        {
+          "name": "participant_id",
+          "in": "query",
+          "description": "Participant to price.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "participant_type",
+          "in": "query",
+          "description": "Participant type identifier.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "market_participant_id",
+          "in": "query",
+          "description": "Exact market participant row to price.",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        {
+          "name": "side",
+          "in": "query",
+          "description": "Use over or under to rank total-style markets by bettor-favorable line before price.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "over",
+              "under"
+            ]
+          }
+        },
+        {
+          "name": "line",
+          "in": "query",
+          "description": "Exact line to match. Omit to allow main-line ranking.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include_alternates",
+          "in": "query",
+          "description": "Include alternate and extended lines.",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "description": "Comma-separated sportsbook affiliate IDs to include.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "description": "Maximum ranked prices to return.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "customer_route_and_handler",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetSteamers",
+      "method": "GET",
+      "path": "/api/v2/odds/steamers",
+      "summary": "Get Steamers by Sport and Date using sport_id/date query",
+      "description": "Returns open prices for a sport and event date whose implied\nprobability moved the most during the requested lookback window.\n",
+      "parameters": [
+        {
+          "name": "sport_id",
+          "in": "query",
+          "required": true,
+          "description": "Sport ID.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "date",
+          "in": "query",
+          "required": true,
+          "description": "Event date in YYYY-MM-DD format or Unix epoch timestamp.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "description": "Minutes from UTC for timezone adjustment.",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        {
+          "name": "window_minutes",
+          "in": "query",
+          "description": "Lookback window for price movement.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120,
+            "default": 5
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "description": "Comma-separated sportsbook affiliate IDs to include.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "description": "Maximum prices to return.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "customer_route_and_handler",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetOutliers",
+      "method": "GET",
+      "path": "/api/v2/odds/outliers",
+      "summary": "Get Bookmaker Outliers by Sport and Date using sport_id/date query",
+      "description": "Returns prices from one sportsbook that are most out of line with the\npeer-book consensus for matching event, market, period, participant,\nand line. The date scope keeps the query bounded and cacheable.\n",
+      "parameters": [
+        {
+          "name": "sport_id",
+          "in": "query",
+          "required": true,
+          "description": "Sport ID.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "date",
+          "in": "query",
+          "required": true,
+          "description": "Event date in YYYY-MM-DD format or Unix epoch timestamp.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "affiliate_id",
+          "in": "query",
+          "required": true,
+          "description": "Sportsbook affiliate ID to compare against peer books.",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "description": "Minutes from UTC for timezone adjustment.",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        {
+          "name": "min_peers",
+          "in": "query",
+          "description": "Minimum peer prices required to calculate consensus.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 2
+          }
+        },
+        {
+          "name": "sample_limit",
+          "in": "query",
+          "description": "Maximum candidate prices to inspect before ranking.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 1000
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "description": "Comma-separated sportsbook affiliate IDs allowed by the request.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "description": "Maximum outliers to return.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": false,
+      "public_contract_source": "customer_route_and_handler",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetParlayBook",
+      "method": "POST",
+      "path": "/api/v2/odds/parlay-book",
+      "summary": "Find Best Same-Book Parlay Price",
+      "description": "Returns sportsbooks that currently have every requested leg open, ranked\nby the combined same-book price. The response does not guarantee that a\nsportsbook will accept the exact betslip combination.\n",
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "legs"
+              ],
+              "properties": {
+                "legs": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "event_id",
+                      "market_id",
+                      "period_id"
+                    ],
+                    "properties": {
+                      "event_id": {
+                        "type": "string"
+                      },
+                      "market_id": {
+                        "type": "integer"
+                      },
+                      "period_id": {
+                        "type": "integer"
+                      },
+                      "participant_id": {
+                        "type": "integer"
+                      },
+                      "participant_type": {
+                        "type": "integer"
+                      },
+                      "market_participant_id": {
+                        "type": "integer",
+                        "format": "int64"
+                      },
+                      "side": {
+                        "type": "string",
+                        "description": "Use over or under for total-style markets.",
+                        "enum": [
+                          "over",
+                          "under"
+                        ]
+                      },
+                      "line": {
+                        "type": "string"
+                      },
+                      "include_alternates": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "affiliate_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            }
+          }
+        }
+      },
+      "status": "public_read_calculation",
+      "published_docs_spec": false,
+      "public_contract_source": "customer_route_and_handler",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v2GetBestParlayBook",
+      "method": "POST",
+      "path": "/api/v2/parlays/best-book",
+      "summary": "Find Best Same-Book Parlay Price",
+      "description": "Returns sportsbooks that currently have every requested leg open, ranked\nby the combined same-book price. The response does not guarantee that a\nsportsbook will accept the exact betslip combination.\n",
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "legs"
+              ],
+              "properties": {
+                "legs": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "event_id",
+                      "market_id",
+                      "period_id"
+                    ],
+                    "properties": {
+                      "event_id": {
+                        "type": "string"
+                      },
+                      "market_id": {
+                        "type": "integer"
+                      },
+                      "period_id": {
+                        "type": "integer"
+                      },
+                      "participant_id": {
+                        "type": "integer"
+                      },
+                      "participant_type": {
+                        "type": "integer"
+                      },
+                      "market_participant_id": {
+                        "type": "integer",
+                        "format": "int64"
+                      },
+                      "side": {
+                        "type": "string",
+                        "description": "Use over or under for total-style markets.",
+                        "enum": [
+                          "over",
+                          "under"
+                        ]
+                      },
+                      "line": {
+                        "type": "string"
+                      },
+                      "include_alternates": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "affiliate_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            }
+          }
+        }
+      },
+      "status": "public_read_calculation",
+      "published_docs_spec": false,
+      "public_contract_source": "gateway_repository_spec",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetEventByID",
+      "method": "GET",
+      "path": "/api/v1/events/{eventId}",
+      "summary": "Get a single event with lines",
+      "description": "",
+      "parameters": [
+        {
+          "name": "eventId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          },
+          "description": "Set to `all_periods` to include period-specific lines"
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated affiliate IDs"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetByLineID",
+      "method": "GET",
+      "path": "/api/v1/events/{eventId}/lines/{lineId}",
+      "summary": "Get event by line ID",
+      "description": "",
+      "parameters": [
+        {
+          "name": "eventId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "lineId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetDelta",
+      "method": "GET",
+      "path": "/api/v1/delta",
+      "summary": "Get event deltas (V1 format)",
+      "description": "",
+      "parameters": [
+        {
+          "name": "last_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 36,
+            "maxLength": 36
+          },
+          "description": "Delta cursor (36-character UUID)"
+        },
+        {
+          "name": "sport_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetDeltaV2",
+      "method": "GET",
+      "path": "/api/v1/deltaV2",
+      "summary": "Get event deltas (V2 format via V1 path)",
+      "description": "",
+      "parameters": [
+        {
+          "name": "last_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "sport_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetBestLineMulti",
+      "method": "GET",
+      "path": "/api/v1/lines/best",
+      "summary": "Get best lines for multiple events",
+      "description": "",
+      "parameters": [
+        {
+          "name": "event_ids",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event IDs"
+        },
+        {
+          "name": "period",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "period_full_game",
+            "enum": [
+              "period_full_game",
+              "period_first_half",
+              "period_second_half",
+              "period_first_period",
+              "period_second_period",
+              "period_third_period",
+              "period_fourth_period",
+              "period_live_full_game",
+              "period_live_first_half",
+              "period_live_second_half",
+              "period_live_first_period",
+              "period_live_second_period",
+              "period_live_third_period",
+              "period_live_fourth_period"
+            ]
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetMoneylines",
+      "method": "GET",
+      "path": "/api/v1/lines/{id}/moneyline",
+      "summary": "Get moneylines for an event",
+      "description": "",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Event ID"
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetTotals",
+      "method": "GET",
+      "path": "/api/v1/lines/{id}/total",
+      "summary": "Get totals (over/under) for an event",
+      "description": "",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetTeamTotals",
+      "method": "GET",
+      "path": "/api/v1/lines/{id}/team_total",
+      "summary": "Get team totals for an event",
+      "description": "",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetSpreads",
+      "method": "GET",
+      "path": "/api/v1/lines/{id}/spread",
+      "summary": "Get spreads for an event",
+      "description": "",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetSports",
+      "method": "GET",
+      "path": "/api/v1/sports",
+      "summary": "List all sports",
+      "description": "",
+      "parameters": [],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetTeamsBySport",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/teams",
+      "summary": "Get teams for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetDivisionsBySport",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/divisions",
+      "summary": "Get divisions for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetConferencesBySport",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/conferences",
+      "summary": "Get conferences for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetDatesBySport",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/dates",
+      "summary": "Get available dates for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "format",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "iso8601",
+            "enum": [
+              "iso8601",
+              "epoch"
+            ]
+          },
+          "description": "Date format \u2014 `iso8601` returns date strings, `epoch` returns Unix timestamps"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetScheduleBySport",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/schedule",
+      "summary": "Get event schedule for a sport",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 50
+          }
+        },
+        {
+          "name": "season_year",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "season_type_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "from",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "team_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "last_event_uuid",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Cursor for pagination \u2014 pass the last event UUID from previous page"
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "default": "asc",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        {
+          "name": "conference_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "division_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "include_teams",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Include team details when present"
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetEventsBySportAndDate",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/events/{date}",
+      "summary": "Get events with lines for a sport and date",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "conference_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "division_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "event_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to include (e.g. `STATUS_IN_PROGRESS,STATUS_HALFTIME`). Applied before `exclude_status`."
+        },
+        {
+          "name": "exclude_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event statuses to exclude"
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetOpenersBySportAndDate",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/openers/{date}",
+      "summary": "Get opening lines for a sport and date",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "conference_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "division_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "event_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to include (e.g. `STATUS_IN_PROGRESS,STATUS_HALFTIME`). Applied before `exclude_status`."
+        },
+        {
+          "name": "exclude_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetClosingBySportAndDate",
+      "method": "GET",
+      "path": "/api/v1/sports/{sportID}/closing/{date}",
+      "summary": "Get closing lines for a sport and date",
+      "description": "",
+      "parameters": [
+        {
+          "name": "sportID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "Sport ID. Common values: 1=NCAAF, 2=NFL, 3=MLB, 4=NBA, 5=NCAAB, 6=NHL, 7=UFC, 8=WNBA, 9=CFL, 10=MLS, 11=EPL, 16=UEFA Champions League, 33=UEFA Europa League, 38=ATP Tennis, 39=WTA Tennis, 40=PGA Tour Golf, 41=Formula 1\n"
+        },
+        {
+          "name": "date",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 0
+          },
+          "description": "UTC offset in **minutes** for the date boundary. Use `300` for US Central, `240` for Eastern, `360` for Mountain, `420` for Pacific. Without this, the API day boundary is midnight UTC."
+        },
+        {
+          "name": "conference_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "division_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "affiliate_ids",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated sportsbook/affiliate IDs to filter. Common values include DraftKings (19), FanDuel (23), BetMGM (22), BookMaker (7), BetCRIS (9), Pinnacle (3), Polymarket US (31), Circa Sports (32), Bet105 (33), and Heritage Sports (34). Availability varies by sport and market.\nOn V2 event endpoints (`/api/v2/sports/{sportID}/events/{date}`, `/api/v2/events/{eventID}`, and their openers/closing siblings), `affiliate_ids=0` is a scores-only sentinel: the response keeps events, scores, and status and omits markets and price objects. Other endpoints that share this parameter treat `affiliate_ids` as a sportsbook filter only.\n"
+        },
+        {
+          "name": "event_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "description": "Comma-separated event status strings to include (e.g. `STATUS_IN_PROGRESS,STATUS_HALFTIME`). Applied before `exclude_status`."
+        },
+        {
+          "name": "exclude_status",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all_periods"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetAffiliates",
+      "method": "GET",
+      "path": "/api/v1/affiliates",
+      "summary": "List all sportsbooks/affiliates",
+      "description": "",
+      "parameters": [
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "regions"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetSportsbooks",
+      "method": "GET",
+      "path": "/api/v1/sportsbooks",
+      "summary": "List all sportsbooks (alias)",
+      "description": "",
+      "parameters": [
+        {
+          "name": "include",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "regions"
+            ]
+          }
+        }
+      ],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    },
+    {
+      "operationId": "v1GetSeasonTypes",
+      "method": "GET",
+      "path": "/api/v1/season_types",
+      "summary": "List season types per sport",
+      "description": "",
+      "parameters": [],
+      "request_body": null,
+      "status": "public_read",
+      "published_docs_spec": true,
+      "public_contract_source": "published_docs_openapi",
+      "mcp_tools": [],
+      "baseline_actions": null
+    }
+  ],
+  "compatibility_aliases": [
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/delta",
+      "operationId": "v2GetDelta"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/stats",
+      "operationId": "v2GetAllStats"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/stats/sample",
+      "operationId": "v2GetStatsSample"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/stats",
+      "operationId": "v2GetStatsByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/players/stats",
+      "operationId": "v2GetPlayerStatsByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/markets",
+      "operationId": "v2GetAllMarkets"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/markets/delta",
+      "operationId": "v2GetMarketsDelta"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/markets/history",
+      "operationId": "v2GetMarketLinePriceHistory"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/markets/participants",
+      "operationId": "v2GetMarketsParticipants"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/teams/{teamID}/",
+      "operationId": "v2GetTeamByID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/teams/{teamID}/players",
+      "operationId": "v2GetPlayersByTeam"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/teams/{teamID}/stats",
+      "operationId": "v2GetTeamStats"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/teams/{teamID}/players/stats",
+      "operationId": "v2GetPlayerStatsByTeam"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/players/{playerID}",
+      "operationId": "v2GetPlayerByID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports",
+      "operationId": "v2GetSports"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/dates",
+      "operationId": "v2GetDatesBySportIDs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/markets/{date}",
+      "operationId": "v2GetMarketsByDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/events/{date}",
+      "operationId": "v2GetEventsByDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/teams",
+      "operationId": "v2GetTeamsBySport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/events/{date}",
+      "operationId": "v2GetEventsBySportAndDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/dates",
+      "operationId": "v2GetDatesBySportID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/divisions",
+      "operationId": "v2GetDivisionsBySport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/conferences",
+      "operationId": "v2GetConferencesBySport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/futures",
+      "operationId": "v2GetFuturesForSport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/futures/{eventID}",
+      "operationId": "v2GetFuturesEventByID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/openers/{date}",
+      "operationId": "v2GetOpenersBySportAndDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/closing/{date}",
+      "operationId": "v2GetClosingBySportAndDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sportID}/markets/{date}",
+      "operationId": "v2GetMarketsBySportAndDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sport_id}/odds/best-lines/{date}",
+      "operationId": "v2GetBestOddsBySportAndDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sport_id}/odds/steamers/{date}",
+      "operationId": "v2GetSteamersBySportAndDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sports/{sport_id}/odds/outliers/{date}",
+      "operationId": "v2GetOutliersBySportAndDate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/affiliates",
+      "operationId": "v2GetAffiliates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/sportsbooks",
+      "operationId": "v2GetSportsbooks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}",
+      "operationId": "v2GetEventByID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/openers",
+      "operationId": "v2GetEventOpeners"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/closing",
+      "operationId": "v2GetEventClosing"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/markets",
+      "operationId": "v2GetAvailableMarketsByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/markets/history",
+      "operationId": "v2GetMarketHistoryByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/markets/opening",
+      "operationId": "v2GetOpeningPricesByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/markets/{marketID}/history",
+      "operationId": "v2GetMarketLineHistoryByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{eventID}/best-line",
+      "operationId": "v2GetBestLineByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/events/{event_id}/odds/best-line",
+      "operationId": "v2GetBestOddsByEvent"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/odds/best-line",
+      "operationId": "v2GetBestOdds"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/odds/steamers",
+      "operationId": "v2GetSteamers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/odds/outliers",
+      "operationId": "v2GetOutliers"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/v2/odds/parlay-book",
+      "operationId": "v2GetParlayBook"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/v2/parlays/best-book",
+      "operationId": "v2GetBestParlayBook"
+    }
+  ],
+  "retired_operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/hedge/{id}",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/hedge/event/{eventID}",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/hedge",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/hedge/top",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/hedge/top/mainline",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v2/hedge/top/props",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hedge",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hedge/top",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hedge/top/mainline",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hedge/top/props",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hedge/{id}",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hedge/event/{eventID}",
+      "status": 410,
+      "reason": "Retired V1 hedge handler; no Product data reads"
+    }
+  ]
+}

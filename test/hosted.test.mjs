@@ -5,7 +5,9 @@ import { test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { createHostedServer } from '../hosted.mjs';
+import { TOOL_NAMES } from '../server.mjs';
 import { OAUTH_RESOURCE, OAUTH_EXCHANGE_URL, OAUTH_METADATA_PATH, OAUTH_ISSUER, exchangeOAuthCredential } from '../oauth.mjs';
+import WebSocket, { WebSocketServer } from 'ws';
 
 const KEY_A = 'synthetic-tenant-alpha';
 const KEY_B = 'synthetic-tenant-bravo';
@@ -158,7 +160,7 @@ test('test listener retries a port claimed between allocation and binding', asyn
   }
 });
 
-test('actual Streamable HTTP client inherits exactly six tools and the brief resource without echoing its credential', async () => {
+test('actual Streamable HTTP client inherits the full reviewed tool set and the brief resource without echoing its credential', async () => {
   const service = await hosted(async (_url, options) => response({
     sports: [{ sport_id: 3, sport_name: `upstream-${options.headers['X-TheRundown-Key']}` }],
   }));
@@ -166,9 +168,7 @@ test('actual Streamable HTTP client inherits exactly six tools and the brief res
     const connection = await clientFor(service.origin, KEY_A);
     try {
       const listed = await connection.client.listTools();
-      assert.deepEqual(listed.tools.map(({ name }) => name), [
-        'list_sports', 'list_affiliates', 'list_markets', 'list_events', 'get_main_lines', 'list_futures',
-      ]);
+      assert.deepEqual(listed.tools.map(({ name }) => name), TOOL_NAMES);
       const resources = await connection.client.listResources();
       assert.equal(resources.resources.some((item) => item.uri === 'therundown://brief'), true);
       const result = await connection.client.callTool({ name: 'list_sports', arguments: {} });
@@ -203,8 +203,8 @@ test('anonymous discovery permits only public metadata and never calls the Produ
     }
     const connection = await anonymousClientFor(service.origin);
     try {
-      assert.deepEqual(connection.client.getServerVersion(), { name: 'therundown-data', version: '0.3.0' });
-      assert.equal((await connection.client.listTools()).tools.length, 6);
+      assert.deepEqual(connection.client.getServerVersion(), { name: 'therundown-data', version: '0.4.0' });
+      assert.equal((await connection.client.listTools()).tools.length, TOOL_NAMES.length);
       assert.equal((await connection.client.listResources()).resources[0].uri, 'therundown://brief');
       assert.equal((await connection.client.readResource({ uri: 'therundown://brief' })).contents[0].mimeType, 'text/markdown');
     } finally {
@@ -216,7 +216,7 @@ test('anonymous discovery permits only public metadata and never calls the Produ
     })).status, 401);
     assert.equal((await postAnonymous(service.origin, {
       body: { jsonrpc: '2.0', id: 6, method: 'ping', params: {} },
-    })).status, 401);
+    })).status, 200);
     assert.equal((await postAnonymous(service.origin, {
       body: REQUEST, headers: { Authorization: 'Basic synthetic' },
     })).status, 401);
@@ -628,16 +628,21 @@ test('OAuth is disabled without its service secret and discovery advertises the 
     assert.deepEqual(await metadata.json(), { resource: OAUTH_RESOURCE,
       authorization_servers: [OAUTH_ISSUER], scopes_supported: ['mcp:read'], bearer_methods_supported: ['header'] });
     const rejected = await oauthPost(service.origin, { token: null });
-    assert.equal(rejected.status, 401);
-    assert.equal(rejected.headers.get('www-authenticate'),
-      `Bearer resource_metadata="${service.origin}${OAUTH_METADATA_PATH}", scope="mcp:read"`);
+    assert.equal(rejected.status, 200);
+    const authError = await rejected.json();
+    assert.equal(authError.id, callSports().id);
+    assert.equal(authError.result.isError, true);
+    assert.equal(authError.result.structuredContent, undefined);
+    assert.deepEqual(authError.result._meta['mcp/www_authenticate'], [rejected.headers.get('www-authenticate')]);
+    assert.match(rejected.headers.get('www-authenticate'), /error="invalid_token", error_description="[^"\r\n]+"/);
     for (const body of [REQUEST, { jsonrpc: '2.0', id: 7, method: 'tools/list' },
-      { jsonrpc: '2.0', id: 8, method: 'resources/read', params: { uri: 'therundown://brief' } }]) {
+      { jsonrpc: '2.0', id: 8, method: 'resources/read', params: { uri: 'therundown://brief' } },
+      { jsonrpc: '2.0', id: 9, method: 'ping' }]) {
       const result = await oauthPost(service.origin, { token: null, body });
       assert.equal(result.status, 200);
       if (body.method === 'tools/list') {
         const tools = (await result.json()).result.tools;
-        assert.equal(tools.length, 6);
+        assert.equal(tools.length, TOOL_NAMES.length);
         for (const tool of tools) {
           assert.deepEqual(tool.securitySchemes, [{ type: 'oauth2', scopes: ['mcp:read'] }]);
           assert.deepEqual(tool._meta.securitySchemes, tool.securitySchemes);
@@ -721,10 +726,14 @@ test('OAuth exchange failures preserve sanitized HTTP status and never fall back
   try {
     for (status of [401, 403, 429, 500, 302]) {
       const result = await oauthPost(service.origin, { token: KEY_A });
-      assert.equal(result.status, [401, 403, 429].includes(status) ? status : 503);
+      assert.equal(result.status, status === 401 ? 200 : [403, 429].includes(status) ? status : 503);
       const text = await result.text();
       for (const secret of [OAUTH_TOKEN_A, EXCHANGE_SECRET, DELEGATED_KEY, KEY_A]) assert.equal(text.includes(secret), false);
-      if (status === 401) assert.match(result.headers.get('www-authenticate'), /resource_metadata=/);
+      if (status === 401) {
+        assert.match(result.headers.get('www-authenticate'), /resource_metadata=/);
+        assert.equal(JSON.parse(text).result.isError, true);
+        assert.deepEqual(JSON.parse(text).result._meta['mcp/www_authenticate'], [result.headers.get('www-authenticate')]);
+      }
       if (status === 429) {
         assert.equal(JSON.parse(text).error.data.limit_reason, null);
         assert.equal(result.headers.get('retry-after'), '7');
@@ -876,7 +885,7 @@ test('OAuth works with the actual Streamable HTTP client and redacts delegated c
   try {
     await client.connect(transport);
     const tools = (await client.listTools()).tools;
-    assert.equal(tools.length, 6);
+    assert.equal(tools.length, TOOL_NAMES.length);
     for (const tool of tools) assert.deepEqual(tool._meta.securitySchemes, [{ type: 'oauth2', scopes: ['mcp:read'] }]);
     assert.equal((await client.listResources()).resources[0].uri, 'therundown://brief');
     assert.equal(exchanges, 0);
@@ -945,5 +954,122 @@ test('OAuth exchange and Product operation share the same total request deadline
     await cancelled;
     assert.ok(performance.now() - before < 380, 'exchange must not grant a second full Product deadline');
     await first;
+  } finally { await service.close(); }
+});
+
+test('hosted OAuth live capture uses only the delegated header and closes its real socket before success', async (t) => {
+  const seen = [];
+  const peers = new WebSocketServer({ port: 0, host: '127.0.0.1' });
+  await once(peers, 'listening');
+  const upstreamPort = peers.address().port;
+  let sockets = 0;
+  peers.on('connection', (peer, request) => {
+    sockets += 1;
+    seen.push(request.headers);
+    peer.send(JSON.stringify({ type: 'delta', affiliate_id: 19, price: 110,
+      source_id: 'public-source', label: DELEGATED_KEY, api_key: 'private-field' }));
+  });
+  class LocalSocket extends WebSocket {
+    constructor(url, options) {
+      const target = new URL(url);
+      assert.equal(target.origin, 'wss://therundown.io');
+      super(`ws://127.0.0.1:${upstreamPort}${target.pathname}${target.search}`, options);
+    }
+  }
+  let exchanges = 0;
+  const service = await hosted(async (url) => {
+    assert.equal(String(url), OAUTH_EXCHANGE_URL);
+    exchanges += 1;
+    return exchangeResponse();
+  }, { exchangeSecret: EXCHANGE_SECRET, WebSocketImpl: LocalSocket });
+  t.after(async () => {
+    await service.close();
+    for (const peer of peers.clients) peer.terminate();
+    await new Promise((resolve) => peers.close(resolve));
+  });
+  const body = { jsonrpc: '2.0', id: 'capture-proof', method: 'tools/call', params: {
+    name: 'capture_market_stream', arguments: { filters: { event_ids: ['event-1'], market_ids: [1], affiliate_ids: [19] }, duration_ms: 20 },
+  } };
+  const anonymous = await oauthPost(service.origin, { token: null, body });
+  assert.equal((await anonymous.json()).result.isError, true);
+  assert.equal(sockets, 0);
+  assert.equal(exchanges, 0);
+  const response = await oauthPost(service.origin, { body });
+  assert.equal(response.status, 200);
+  const result = (await response.json()).result;
+  assert.equal(result.isError, undefined);
+  assert.equal(result.structuredContent.persistent_stream, false);
+  assert.equal(result.structuredContent.stop_reason, 'duration_limit');
+  assert.equal(result.structuredContent.frames[0].source_id, 'public-source');
+  assert.match(result.structuredContent.frames[0].label, /^\[redacted\]$/i);
+  assert.equal(result.structuredContent.frames[0].api_key, undefined);
+  assert.equal(exchanges, 1);
+  assert.equal(sockets, 1);
+  assert.equal(seen[0]['x-therundown-key'], DELEGATED_KEY);
+  assert.equal(seen[0].authorization, undefined);
+  assert.equal(seen[0]['x-therundown-mcp-service'], undefined);
+  for (const peer of peers.clients) assert.ok([WebSocket.CLOSING, WebSocket.CLOSED].includes(peer.readyState));
+});
+
+test('hosted request timeout cancels a real live capture and releases account capacity', async (t) => {
+  const peers = new WebSocketServer({ port: 0, host: '127.0.0.1' });
+  await once(peers, 'listening');
+  const upstreamPort = peers.address().port;
+  let opened = 0;
+  peers.on('connection', () => { opened += 1; });
+  class LocalSocket extends WebSocket {
+    constructor(url, options) {
+      const target = new URL(url);
+      super(`ws://127.0.0.1:${upstreamPort}${target.pathname}${target.search}`, options);
+    }
+  }
+  const service = await hosted(async () => exchangeResponse(), {
+    // Leave room for schema construction and the real handshake on a busy CI
+    // worker; the deadline must still interrupt the requested five-second read.
+    exchangeSecret: EXCHANGE_SECRET, WebSocketImpl: LocalSocket, requestTimeoutMs: 2000,
+  });
+  t.after(async () => {
+    await service.close();
+    for (const peer of peers.clients) peer.terminate();
+    await new Promise((resolve) => peers.close(resolve));
+  });
+  const body = { jsonrpc: '2.0', id: 123, method: 'tools/call', params: {
+    name: 'capture_market_stream', arguments: { filters: { event_ids: ['event-1'], market_ids: [1], affiliate_ids: [19] }, duration_ms: 5000 },
+  } };
+  for (let run = 0; run < 2; run += 1) {
+    const start = Date.now();
+    const result = await oauthPost(service.origin, { body });
+    assert.equal(result.status, 200);
+    const value = (await result.json()).result;
+    assert.equal(value.isError, true);
+    assert.equal(value.structuredContent.error, 'request_aborted');
+    assert.ok(Date.now() - start < 4500);
+    for (const peer of peers.clients) assert.ok([WebSocket.CLOSING, WebSocket.CLOSED].includes(peer.readyState));
+  }
+  assert.equal(opened, 2);
+});
+
+test('OAuth rejection by Product after a successful exchange still triggers linking without retry', async () => {
+  let exchanges = 0;
+  let products = 0;
+  const service = await hosted(async (url) => {
+    if (String(url) === OAUTH_EXCHANGE_URL) { exchanges += 1; return exchangeResponse(); }
+    products += 1;
+    return new Response(JSON.stringify({ error: 'revoked' }), {
+      status: 401, headers: { 'content-type': 'application/json' },
+    });
+  }, { exchangeSecret: EXCHANGE_SECRET });
+  try {
+    const response = await oauthPost(service.origin);
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.id, callSports().id);
+    assert.equal(payload.result.isError, true);
+    assert.equal(payload.result.structuredContent.status, 401);
+    const challenge = payload.result._meta['mcp/www_authenticate'][0];
+    assert.ok(challenge.includes(`resource_metadata="${service.origin}${OAUTH_METADATA_PATH}"`));
+    assert.match(challenge, /error="invalid_token", error_description=/);
+    assert.equal(products, 1);
+    assert.equal(exchanges, 1);
   } finally { await service.close(); }
 });

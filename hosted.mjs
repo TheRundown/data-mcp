@@ -67,6 +67,25 @@ function jsonError(res, status, message, headers = {}, details = {}) {
   res.end(text);
 }
 
+// MCP tool errors must carry the OAuth challenge inside the result for ChatGPT
+// to offer account linking. This is an error envelope, never anonymous data.
+function oauthToolError(res, body, challenge, message) {
+  if (body?.jsonrpc !== '2.0' || body.method !== 'tools/call'
+    || !(typeof body.id === 'string' || (typeof body.id === 'number' && Number.isFinite(body.id)))
+    || !body.params || typeof body.params.name !== 'string') return false;
+  const text = JSON.stringify({ jsonrpc: '2.0', id: body.id, result: {
+    isError: true,
+    content: [{ type: 'text', text: message }],
+    _meta: { 'mcp/www_authenticate': [challenge] },
+  } });
+  res.writeHead(200, {
+    'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store',
+    'content-length': Buffer.byteLength(text), 'www-authenticate': challenge,
+  });
+  res.end(text);
+  return true;
+}
+
 function hasSingleHeader(req, name) {
   return req.rawHeaders.filter((_, index) => index % 2 === 0
     && req.rawHeaders[index].toLowerCase() === name).length === 1;
@@ -114,7 +133,7 @@ function oauthTokenFrom(req) {
 function isAnonymousDiscoveryRequest(body) {
   if (body.jsonrpc !== '2.0' || typeof body.method !== 'string') return false;
   if (body.method === 'initialize' || body.method === 'notifications/initialized'
-    || body.method === 'tools/list' || body.method === 'resources/list') return true;
+    || body.method === 'tools/list' || body.method === 'resources/list' || body.method === 'ping') return true;
   return body.method === 'resources/read'
     && body.params && typeof body.params === 'object' && !Array.isArray(body.params)
     && body.params.uri === 'therundown://brief';
@@ -274,6 +293,7 @@ export function createHostedServer({
   maxConcurrent = process.env.THERUNDOWN_MCP_MAX_CONCURRENT,
   requestTimeoutMs = process.env.THERUNDOWN_MCP_REQUEST_TIMEOUT_MS,
   exchangeSecret = process.env.THERUNDOWN_MCP_EXCHANGE_SECRET,
+  WebSocketImpl,
 } = {}) {
   const policy = publicOriginPolicy(publicOrigin);
   const concurrencyCap = positiveInteger(maxConcurrent, DEFAULT_CONCURRENCY, 'THERUNDOWN_MCP_MAX_CONCURRENT', MAX_CONCURRENCY);
@@ -288,6 +308,7 @@ export function createHostedServer({
     configError('OAuth requires the registered mcp.therundown.io resource origin.');
   }
   const oauthChallenge = { 'www-authenticate': `Bearer resource_metadata="${policy.origin}${OAUTH_METADATA_PATH}", scope="${OAUTH_SCOPE}"` };
+  const linkingChallenge = `${oauthChallenge['www-authenticate']}, error="invalid_token", error_description="Connect or reconnect your TheRundown account to continue"`;
 
   let activeTotal = 0;
   const activeByKey = new Map();
@@ -365,6 +386,7 @@ export function createHostedServer({
     const timer = setTimeout(abort, timeoutMs);
     const pendingFetches = new Set();
     let accountDigest;
+    let body;
     const trackedFetch = (url, init = {}) => {
       const request = Promise.resolve().then(async () => {
         const signal = AbortSignal.any([controller.signal, ...(init.signal ? [init.signal] : [])]);
@@ -390,15 +412,18 @@ export function createHostedServer({
     });
 
     try {
-      const body = await readJsonBody(req, controller.signal);
+      body = await readJsonBody(req, controller.signal);
       if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
       const discovery = isAnonymousDiscoveryRequest(body);
       if (!credential && !discovery) {
+        if (isOAuth && oauthToolError(res, body, linkingChallenge,
+          'Connect a TheRundown account with OAuth before calling this tool.')) return;
         jsonError(res, 401, isOAuth ? 'Connect a TheRundown account with OAuth before calling this method.'
           : 'Send a Product API key in exactly one header: X-TheRundown-Key or Authorization: Bearer.', isOAuth ? oauthChallenge : {});
         return;
       }
       let apiKey = isOAuth ? null : credential;
+      let expiresAt;
       if (isOAuth && !discovery) {
         const resolved = await exchangeOAuthCredential(credential, exchangeSecret, trackedFetch, controller.signal);
         if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
@@ -410,8 +435,10 @@ export function createHostedServer({
         accountDigest = digest;
         activeByAccount.add(accountDigest);
         apiKey = resolved.apiKey;
+        expiresAt = resolved.expiresAt;
       }
-      const server = createDataServer({ apiKey: apiKey ?? null, fetchImpl: trackedFetch, oauthSecurity: isOAuth });
+      const server = createDataServer({ apiKey: apiKey ?? null, fetchImpl: trackedFetch, oauthSecurity: isOAuth,
+        signal: controller.signal, expiresAt, WebSocketImpl, oauthChallenge: linkingChallenge });
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
@@ -449,6 +476,7 @@ export function createHostedServer({
         const headers = isOAuth && status === 401 ? oauthChallenge
           : error instanceof OAuthExchangeError && error.retryAfter !== null
             ? { 'retry-after': String(error.retryAfter) } : {};
+        if (isOAuth && status === 401 && oauthToolError(res, body, linkingChallenge, message)) return;
         jsonError(res, status, message, headers,
           error instanceof OAuthExchangeError ? { limit_reason: null } : {});
       }

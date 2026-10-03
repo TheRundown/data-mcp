@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --omit=dev
 
-COPY server.mjs hosted.mjs oauth.mjs ./
+COPY server.mjs hosted.mjs oauth.mjs product-api.mjs product-operations.json live-stream.mjs public-response.mjs ./
 
 USER node
 
