@@ -2,21 +2,15 @@
 
 > This is the official TheRundown source repository. `aigeon-ai/therundown` is unofficial.
 
-A local, read-only Model Context Protocol server for TheRundown Product API. It fetches sports, affiliates, market definitions, events, futures, and open main lines using your own API key. It uses the official MCP SDK and Node.js 22+.
+The 0.4.0 source candidate registers 75 public REST operation tools, four bounded actual WebSocket capture tools, and six existing convenience tools. It uses the official MCP SDK and Node.js 22+. [COVERAGE.md](COVERAGE.md) lists exact routes, aliases, retired/private exclusions and transport limits.
 
-This directory is a runnable source example. The same six tools are also deployed as a hosted, authenticated Streamable HTTP endpoint at `https://mcp.therundown.io/mcp`; there is still no published npm package. The existing `https://docs.therundown.io/mcp` endpoint searches documentation only.
+The hosted account connection is `https://mcp.therundown.io/oauth/mcp`; legacy `/` and `/mcp` accept Product API keys in authenticated headers. The last live proof on 2026-10-03 found version 0.3.0 with six tools. This expanded candidate is not yet deployed or publicly listed. A personal connection is not a directory listing. The separate documentation MCP at `https://docs.therundown.io/mcp` cannot return Product prices.
 
-Cursor configuration for that server is in the [Documentation MCP repository](https://github.com/TheRundown/documentation-mcp).
+ChatGPT uses Streamable HTTP. Each capture opens a real upstream WebSocket, observes at most five seconds / 50 messages / 256 KiB, then closes. It is not a continuous background feed. See [COVERAGE.md](COVERAGE.md) for channel, snapshot and resume limits, and [HOSTED.md](HOSTED.md) for deployment requirements.
 
-The separate [HTTP adapter](HOSTED.md) implements the hosted endpoint at
-`https://mcp.therundown.io/mcp`. It is excluded from the local ZIP and is
-never started by `npm start`; the ZIP remains a local, stdio-only install.
+Anonymous metadata and ping make no Product calls. Every data tool requires local key authentication or the connected account on the OAuth route. Keep credentials out of prompts, URLs, source, logs and browser bundles.
 
-The checked-out source is version **0.3.0**. Clients can initialize, list the six
-tools and public resources, and read `therundown://brief` before a Product API key
-is configured. Tool definitions now include human-readable titles and object-root
-output schemas. Product tool calls still require a key and fail before any network
-request when it is absent. The published source ZIP remains version 0.2.3. Source 0.3.0 adds a separate OAuth account-linking candidate; see [HOSTED.md](HOSTED.md) for its backend and deployment prerequisites. OAuth availability has not yet been established.
+The historical source ZIP below remains 0.2.3 and does not include this candidate. There is no published npm package. That ZIP is stdio-only; `npm start` does not start the HTTP adapter.
 
 Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.3.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.3.sha256), and extract it. The official ZIP is 41,072 bytes and its SHA-256 is `cb0a0841aa040f049ffddec5b5fa2436cb9de721a30a3bd53270132db7204025`. The [ZIP manifest](releases/0.2.3/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
 
@@ -65,7 +59,7 @@ Client references: [local MCP servers](https://modelcontextprotocol.io/docs/deve
 
 Replace the path and key locally. Use your client's secret storage or inherited environment when available. Do not commit a filled-in client config. The server reads `THERUNDOWN_API_KEY` from its process environment and sends it only as `X-TheRundown-Key`; keys are never accepted as tool arguments. `stdout` contains only MCP protocol messages. Without a key, the process stays available for MCP metadata discovery and returns a sanitized `missing_credentials` error for Product tool calls without making a network request.
 
-The six tools are:
+The original six convenience tools are:
 
 | Tool | What it does | When not to use it for discovery |
 | --- | --- | --- |
@@ -91,7 +85,7 @@ and the returned usage headers. Explain empty results without inventing odds.
 
 `npm test` runs offline. To check actual Product API data, privately set `THERUNDOWN_API_KEY` and run `npm run smoke`. The default checks pre-match `[1,2,3]` for MLB and affiliates `[19,23]`. Free includes delayed pre-match odds and excludes live odds, props/alternates, and history; a source catalog row does not grant access to it.
 
-With an eligible key, `THERUNDOWN_SMOKE_LIVE=1 npm run smoke` also requests live `[41,42,43]`. `THERUNDOWN_SMOKE_DATE=YYYY-MM-DD` and `THERUNDOWN_SMOKE_SPORT_ID` select the dated scope. For a bounded Ultra+ competition check, set `THERUNDOWN_SMOKE_FUTURES=1` and a sport such as `40` (PGA) or `41` (Formula 1); it requests only market `1141` and affiliates `19,23`. The check has a 60-second deadline, verifies all six tool names, and reports its UTC check time, scope, selected event ID, source URLs, usage, and counts. Require `status: "ok"`, six tools, and positive event/main-line counts. Empty data is inconclusive and exits 2. These requests are opt-in and metered.
+With an eligible key, `THERUNDOWN_SMOKE_LIVE=1 npm run smoke` also requests live `[41,42,43]`. `THERUNDOWN_SMOKE_DATE=YYYY-MM-DD` and `THERUNDOWN_SMOKE_SPORT_ID` select the dated scope. For a bounded Ultra+ competition check, set `THERUNDOWN_SMOKE_FUTURES=1` and a sport such as `40` (PGA) or `41` (Formula 1); it requests only market `1141` and affiliates `19,23`. The check has a 60-second deadline, verifies the reviewed source tool manifest, and reports its UTC check time, scope, selected event ID, source URLs, usage, and counts. Require `status: "ok"`, the full source tool manifest, and positive event/main-line counts. Empty data is inconclusive and exits 2. These requests are opt-in and metered.
 
 Usage, API plan delays, and entitlements apply to every request. Catalog, date-market, event, and main-line pages paginate locally, so each page refetches a snapshot and is separately metered. `list_futures` uses the API's upstream opaque cursor and page limit; each cursor page is still a metered request and is only a partial competition listing when `has_more` is true. Results expose safe source URLs, retrieval timestamps, API usage headers, and per-price `updated_at`; a retrieval timestamp is not evidence that a price is fresh.
 

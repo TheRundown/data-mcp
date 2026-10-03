@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { TOOL_NAMES } from './server.mjs';
 
 const NODE = process.execPath;
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -43,7 +44,7 @@ export const getSmokeScope = (env = process.env) => {
 };
 
 export const hasExpectedTools = (tools) => {
-  const expected = ['list_sports', 'list_affiliates', 'list_markets', 'list_events', 'get_main_lines', 'list_futures'];
+  const expected = TOOL_NAMES;
   return Array.isArray(tools) && tools.length === expected.length
     && expected.every((name) => tools.some((tool) => tool?.name === name));
 };

@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { AjvJsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/ajv';
-import { AGENT_BRIEF, FIRST_CONVERSATION, createDataServer } from '../server.mjs';
+import { AGENT_BRIEF, FIRST_CONVERSATION, TOOL_NAMES, createDataServer } from '../server.mjs';
 import { getSmokeScope, hasExpectedTools, selectEventId } from '../smoke.mjs';
 
 const NODE22 = process.execPath;
@@ -92,10 +92,9 @@ test('smoke scope supports explicit dated sport and an opt-in scoped futures req
   assert.throws(() => getSmokeScope({ THERUNDOWN_SMOKE_LIVE: '1', THERUNDOWN_SMOKE_FUTURES: '1' }), /invalid_smoke_scope/);
 });
 
-test('smoke tool contract requires exactly the six expected unique names in any order', () => {
-  const expected = [
-    'list_sports', 'list_affiliates', 'list_markets', 'list_events', 'get_main_lines', 'list_futures',
-  ];
+test('smoke tool contract requires exactly the reviewed unique tool names in any order', () => {
+  const expected = TOOL_NAMES;
+  assert.equal(expected.length, 85);
   assert.equal(hasExpectedTools(expected.slice().reverse().map((name) => ({ name }))), true);
   assert.equal(hasExpectedTools(expected.slice(0, 4).map((name) => ({ name }))), false);
   assert.equal(hasExpectedTools([
@@ -150,18 +149,17 @@ test('SDK discovery lists all tools and preserves usage metadata', async () => {
       headers: { 'X-Datapoints': '0', 'X-Data-Delay-Seconds': '0' },
     });
   }, async (client) => {
-    assert.deepEqual(client.getServerVersion(), { name: 'therundown-data', version: '0.3.0' });
+    assert.deepEqual(client.getServerVersion(), { name: 'therundown-data', version: '0.4.0' });
     const tools = await client.listTools();
-    assert.deepEqual(tools.tools.map((tool) => tool.name), [
-      'list_sports', 'list_affiliates', 'list_markets', 'list_events', 'get_main_lines', 'list_futures',
-    ]);
-    assert.deepEqual(tools.tools.map((tool) => tool.title), [
+    assert.deepEqual(tools.tools.map((tool) => tool.name), TOOL_NAMES);
+    assert.deepEqual(tools.tools.slice(0, 6).map((tool) => tool.title), [
       'List sports', 'List affiliates', 'List markets', 'List events', 'Get main lines', 'List futures',
     ]);
     for (const tool of tools.tools) {
       assert.equal(tool.outputSchema.type, 'object');
       assert.equal(tool.outputSchema.additionalProperties, false);
-      assert.ok(tool.outputSchema.properties.data);
+      assert.ok(tool.outputSchema.properties.data || tool.outputSchema.properties.frames);
+      assert.ok(tool.title?.length > 0);
       assert.ok(tool.outputSchema.properties.error);
     }
     const schemaByName = Object.fromEntries(tools.tools.map((tool) => [tool.name, tool.outputSchema]));
@@ -187,7 +185,7 @@ test('keyless discovery exposes the brief and tool contracts without an upstream
     throw new Error('No Product API request expected');
   }, async (client) => {
     const tools = await client.listTools();
-    assert.equal(tools.tools.length, 6);
+    assert.equal(tools.tools.length, TOOL_NAMES.length);
     assert.equal(tools.tools.every((tool) => tool.outputSchema?.type === 'object'), true);
     const resources = await client.listResources();
     assert.deepEqual(resources.resources.map(({ uri }) => uri), ['therundown://brief']);
@@ -823,7 +821,8 @@ test('brief resource and initialize instructions share the first conversation wi
     assert.equal(client.getInstructions(), AGENT_BRIEF);
     assert.ok(AGENT_BRIEF.includes(FIRST_CONVERSATION));
     const tools = await client.listTools();
-    for (const tool of tools.tools) assert.match(tool.description.split('. ')[1], /^Do not /);
+    for (const tool of tools.tools.slice(0, 6)) assert.match(tool.description.split('. ')[1], /^Do not /);
+    for (const tool of tools.tools) assert.ok(tool.description.length > 40);
   });
 });
 
@@ -959,7 +958,7 @@ test('stdio initialize and list_tools do not call upstream', async () => {
   const client = new Client({ name: 'stdio-test-client', version: '1.0.0' }, { capabilities: {} });
   await client.connect(transport);
   const tools = await client.listTools();
-  assert.equal(tools.tools.length, 6);
+  assert.equal(tools.tools.length, TOOL_NAMES.length);
   assert.equal(transport.pid > 0, true);
   await client.close();
 });
@@ -975,7 +974,7 @@ test('stdio remains available for discovery without a key', async () => {
   const client = new Client({ name: 'stdio-keyless-test-client', version: '1.0.0' }, { capabilities: {} });
   await client.connect(transport);
   try {
-    assert.equal((await client.listTools()).tools.length, 6);
+    assert.equal((await client.listTools()).tools.length, TOOL_NAMES.length);
     const result = await client.callTool({ name: 'list_sports', arguments: {} });
     assert.equal(result.isError, true);
     assert.match(textResult(result), /missing_credentials/);

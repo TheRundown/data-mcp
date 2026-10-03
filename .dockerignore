@@ -6,3 +6,7 @@
 !server.mjs
 !hosted.mjs
 !oauth.mjs
+!product-api.mjs
+!product-operations.json
+!live-stream.mjs
+!public-response.mjs

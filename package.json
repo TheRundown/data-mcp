@@ -1,6 +1,6 @@
 {
   "name": "therundown-data-mcp-scaffold",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Local read-only MCP example for TheRundown Product API",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
+    "ws": "8.22.0",
     "zod": "4.5.4"
   }
 }

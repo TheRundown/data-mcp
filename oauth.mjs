@@ -94,7 +94,7 @@ export async function exchangeOAuthCredential(token, secret, fetchImpl, signal) 
       || value.scope !== OAUTH_SCOPE || value.resource !== OAUTH_RESOURCE) {
       throw new OAuthExchangeError(503);
     }
-    return { apiKey: value.api_key, accountId: value.account_id };
+    return { apiKey: value.api_key, accountId: value.account_id, expiresAt: expires };
   } catch (error) {
     if (signal.aborted) throw error;
     throw error instanceof OAuthExchangeError ? error : new OAuthExchangeError(503);
