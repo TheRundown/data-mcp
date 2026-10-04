@@ -44,7 +44,7 @@ error bodies are bounded to 64 KiB and never echoed.
 
 - The executable uses one fixed HTTPS Product origin and GET-only paths. Redirects fail rather than forwarding a key to another origin.
 - The key comes from the process environment and is sent only in `X-TheRundown-Key`. The server does not read a repository `.env` automatically, log request headers, or return raw error bodies. Configured key text is redacted from tool output.
-- The hosted adapter permits anonymous MCP metadata discovery only. Protected methods use explicit Product keys on the legacy routes, or a scoped OAuth connection on `/oauth/mcp`; the latter requires the configured server-side exchange and live account authorization.
+- The hosted adapter permits anonymous MCP metadata discovery, except OAuth initialization requires a freshly validated bearer token and challenges missing or invalid tokens with HTTP 401. Protected methods use explicit Product keys on the legacy routes, or a scoped OAuth connection on `/oauth/mcp`; the latter requires the configured server-side exchange and live account authorization. Legacy initialization remains anonymous.
 - One request may be in flight. Extra concurrent calls return `busy`; calls are not queued and there are no automatic retries. Clients control request cadence and should respect `429`/`Retry-After` and the calling plan's quota.
 - A 15-second deadline and MCP cancellation abort the fetch/body read. Upstream bodies are capped at 4 MiB before JSON parsing. Large requests fail explicitly instead of returning silent partial odds.
 - Only allowlisted usage/entitlement headers are returned. `401`, `403`, `404`, and `429` get useful, sanitized messages. Transport and unexpected errors get a generic error; stdout is reserved for MCP.

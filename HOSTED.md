@@ -24,10 +24,11 @@ node hosted.mjs
 The public origin must be a bare HTTPS origin (HTTP is accepted only for
 loopback test origins). There is no wildcard CORS policy, no query credentials,
 no proxy configuration, no alternate API host, and no stored session or customer
-credential store. Responses are `Cache-Control: no-store`. Initialization, the
-initialized notification, tool and resource listing, and reads of the exact
-`therundown://brief` resource may omit credentials and never call the Product API.
-For every Product tool call, send exactly one Product API key:
+credential store. Responses are `Cache-Control: no-store`. On the legacy `/`
+and `/mcp` routes, initialization, the initialized notification, tool and resource
+listing, and reads of the exact `therundown://brief` resource may omit credentials
+and never call the Product API. For every legacy Product tool call, send exactly
+one Product API key:
 
 ```http
 X-TheRundown-Key: YOUR_PRODUCT_API_KEY
@@ -99,9 +100,12 @@ Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
 This route rejects Product key headers, credential aliases, duplicate headers,
 and requests that combine credential forms. It never falls back to raw Product
 key authentication. The existing `/` and `/mcp` routes continue to use Product
-keys as described above. Anonymous initialization, tool and resource listing,
-and the exact brief resource are available on the enabled OAuth route and do
-not contact either upstream service.
+keys for data calls and allow anonymous initialization. On the enabled
+OAuth route, initialization requires a valid bearer token and a fresh exchange;
+missing or invalid tokens receive HTTP 401 with the protected-resource metadata
+URL and `mcp:read` scope in `WWW-Authenticate`. Initialization does not call
+Product. Anonymous tool and resource listing, ping, and the exact brief resource
+remain available without contacting either upstream service.
 
 For every protected OAuth request, the adapter makes one server-side request
 to the fixed HTTPS endpoint `https://auth.therundown.io/mcp/exchange/`, carrying

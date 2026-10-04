@@ -174,7 +174,7 @@ Every socket closes before its call finishes, including on cancellation or deleg
 
 ## Auth, deployment and public listing
 
-Legacy / and /mcp remain key-authenticated. /oauth/mcp uses each connected account with mcp:read. Anonymous initialize/tools/list/brief/ping carries no Product data. OAuth errors include the documented mcp/www_authenticate tool challenge; no data call falls back to another account or a developer key.
+Legacy / and /mcp remain key-authenticated for data calls and permit anonymous initialization. /oauth/mcp uses each connected account with mcp:read; initialize requires a freshly validated OAuth token and challenges missing or invalid tokens with HTTP 401. Anonymous tools/list/brief/ping carries no Product data. OAuth tool errors include the documented mcp/www_authenticate challenge; no data call falls back to another account or a developer key.
 
 Deploy the matching reviewed gateway change before claiming live full coverage. It independently allows only the catalog, freshly validates Citizen grants and closes each delegated socket by min(credential expiry, ten seconds). Revocation is rechecked at the next admission; the existing socket lifetime is bounded, not instant push revocation.
 

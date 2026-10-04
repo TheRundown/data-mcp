@@ -414,7 +414,10 @@ export function createHostedServer({
     try {
       body = await readJsonBody(req, controller.signal);
       if (controller.signal.aborted) throw Object.assign(new Error('request_aborted'), { code: 'request_aborted' });
-      const discovery = isAnonymousDiscoveryRequest(body);
+      // OAuth initialization must challenge before protocol negotiation;
+      // authenticated initialization uses the same fresh exchange as tool calls.
+      const discovery = isAnonymousDiscoveryRequest(body)
+        && !(isOAuth && body.method === 'initialize');
       if (!credential && !discovery) {
         if (isOAuth && oauthToolError(res, body, linkingChallenge,
           'Connect a TheRundown account with OAuth before calling this tool.')) return;

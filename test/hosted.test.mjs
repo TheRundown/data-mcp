@@ -614,6 +614,7 @@ test('OAuth is disabled without its service secret and discovery advertises the 
   try {
     assert.equal((await fetch(`${disabled.origin}${OAUTH_METADATA_PATH}`)).status, 404);
     assert.equal((await oauthPost(disabled.origin)).status, 503);
+    assert.equal((await oauthPost(disabled.origin, { token: null, body: REQUEST })).status, 503);
     assert.equal((await postAnonymous(disabled.origin)).status, 200);
     assert.equal(reads, 0);
   } finally { await disabled.close(); }
@@ -635,7 +636,7 @@ test('OAuth is disabled without its service secret and discovery advertises the 
     assert.equal(authError.result.structuredContent, undefined);
     assert.deepEqual(authError.result._meta['mcp/www_authenticate'], [rejected.headers.get('www-authenticate')]);
     assert.match(rejected.headers.get('www-authenticate'), /error="invalid_token", error_description="[^"\r\n]+"/);
-    for (const body of [REQUEST, { jsonrpc: '2.0', id: 7, method: 'tools/list' },
+    for (const body of [{ jsonrpc: '2.0', id: 7, method: 'tools/list' },
       { jsonrpc: '2.0', id: 8, method: 'resources/read', params: { uri: 'therundown://brief' } },
       { jsonrpc: '2.0', id: 9, method: 'ping' }]) {
       const result = await oauthPost(service.origin, { token: null, body });
@@ -650,6 +651,55 @@ test('OAuth is disabled without its service secret and discovery advertises the 
       }
     }
     assert.equal(reads, 0);
+  } finally { await service.close(); }
+});
+
+test('OAuth initialization challenges missing and invalid tokens and freshly validates valid tokens without Product calls', async () => {
+  const calls = [];
+  const service = await hosted(async (url, options) => {
+    calls.push({ url: String(url), options });
+    assert.equal(String(url), OAUTH_EXCHANGE_URL);
+    if (options.headers.Authorization === 'Bearer synthetic-invalid') {
+      return exchangeResponse({ error: 'invalid_token' }, { status: 401 });
+    }
+    return exchangeResponse();
+  }, { exchangeSecret: EXCHANGE_SECRET });
+  try {
+    const challenge = `Bearer resource_metadata="${service.origin}${OAUTH_METADATA_PATH}", scope="mcp:read"`;
+    const missing = await oauthPost(service.origin, { token: null, body: REQUEST });
+    assert.equal(missing.status, 401);
+    assert.equal(missing.headers.get('www-authenticate'), challenge);
+    assert.equal(missing.headers.get('cache-control'), 'no-store');
+    assert.ok((await missing.json()).error);
+    assert.equal(calls.length, 0);
+
+    const invalid = await oauthPost(service.origin, { token: 'synthetic-invalid', body: REQUEST });
+    assert.equal(invalid.status, 401);
+    assert.equal(invalid.headers.get('www-authenticate'), challenge);
+    assert.ok((await invalid.json()).error);
+    assert.equal(calls.length, 1);
+
+    for (let i = 0; i < 2; i += 1) {
+      const valid = await oauthPost(service.origin, { body: REQUEST });
+      assert.equal(valid.status, 200);
+      assert.equal(valid.headers.get('www-authenticate'), null);
+      const initialized = await valid.json();
+      assert.equal(initialized.id, REQUEST.id);
+      assert.equal(initialized.result.serverInfo.version, '0.4.0');
+    }
+    assert.equal(calls.length, 3);
+    for (const { url, options } of calls) {
+      assert.equal(url, OAUTH_EXCHANGE_URL);
+      assert.equal(options.redirect, 'error');
+      assert.equal(options.cache, 'no-store');
+      assert.deepEqual(JSON.parse(options.body), { resource: OAUTH_RESOURCE });
+    }
+    for (const path of ['/', '/mcp']) {
+      const legacy = await postAnonymous(service.origin, { path });
+      assert.equal(legacy.status, 200);
+      assert.equal((await legacy.json()).result.serverInfo.version, '0.4.0');
+    }
+    assert.equal(calls.length, 3);
   } finally { await service.close(); }
 });
 
@@ -888,12 +938,12 @@ test('OAuth works with the actual Streamable HTTP client and redacts delegated c
     assert.equal(tools.length, TOOL_NAMES.length);
     for (const tool of tools) assert.deepEqual(tool._meta.securitySchemes, [{ type: 'oauth2', scopes: ['mcp:read'] }]);
     assert.equal((await client.listResources()).resources[0].uri, 'therundown://brief');
-    assert.equal(exchanges, 0);
+    assert.equal(exchanges, 1);
     const result = await client.callTool({ name: 'list_sports', arguments: {} });
     assert.equal(result.isError, undefined);
     assert.equal(JSON.stringify(result).includes(DELEGATED_KEY), false);
     assert.match(JSON.stringify(result), /REDACTED/);
-    assert.equal(exchanges, 1);
+    assert.equal(exchanges, 2);
     assert.equal(products, 1);
   } finally { await Promise.allSettled([client.close(), transport.close()]); await service.close(); }
 });
