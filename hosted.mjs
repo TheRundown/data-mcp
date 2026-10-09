@@ -17,6 +17,12 @@ const CREDENTIAL_ALIASES = new Set([
 const CORS_HEADERS = new Set([
   'authorization', 'content-type', 'mcp-protocol-version', 'x-therundown-key',
 ]);
+// ChatGPT's plugin portal reads the public protected-resource metadata from
+// these browser origins. They receive CORS on that one read-only document only;
+// every MCP endpoint keeps the single configured-origin policy.
+const METADATA_CORS_ORIGINS = new Set(['https://chatgpt.com', 'https://platform.openai.com']);
+const METADATA_CORS_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const METADATA_CORS_HEADERS = new Set(['mcp-protocol-version']);
 
 function configError(message) {
   throw new Error(`Invalid hosted MCP configuration: ${message}`);
@@ -220,6 +226,29 @@ function addCorsHeaders(res, origin, policy) {
   return true;
 }
 
+function addMetadataCorsHeaders(req, res, origin) {
+  if (req.url !== OAUTH_METADATA_PATH || !METADATA_CORS_ORIGINS.has(origin)
+    || !METADATA_CORS_METHODS.has(req.method)) return false;
+  res.setHeader('access-control-allow-origin', origin);
+  res.setHeader('access-control-allow-methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('access-control-allow-headers', 'Mcp-Protocol-Version');
+  res.setHeader('vary', 'Origin');
+  return true;
+}
+
+function isValidMetadataPreflight(req) {
+  if (!hasSingleHeader(req, 'access-control-request-method')
+    || !['GET', 'HEAD'].includes(req.headers['access-control-request-method'])) return false;
+  if (!hasAnyHeader(req, 'access-control-request-headers')) return true;
+  if (!hasSingleHeader(req, 'access-control-request-headers')) return false;
+  const requested = req.headers['access-control-request-headers'];
+  if (typeof requested !== 'string') return false;
+  if (requested.trim() === '') return true;
+  const names = requested.split(',').map((name) => name.trim().toLowerCase());
+  return names.every((name) => name && METADATA_CORS_HEADERS.has(name))
+    && new Set(names).size === names.length;
+}
+
 function isValidPreflight(req) {
   if (!hasSingleHeader(req, 'access-control-request-method')
     || req.headers['access-control-request-method'] !== 'POST') return false;
@@ -317,7 +346,8 @@ export function createHostedServer({
   const httpServer = createServer(async (req, res) => {
     const origin = req.headers.origin;
     if (hasAnyHeader(req, 'origin') && (!hasSingleHeader(req, 'origin')
-      || typeof origin !== 'string' || !addCorsHeaders(res, origin, policy))) {
+      || typeof origin !== 'string'
+      || !(addMetadataCorsHeaders(req, res, origin) || addCorsHeaders(res, origin, policy)))) {
       jsonError(res, 403, 'Request origin is not allowed.');
       return;
     }
@@ -327,17 +357,25 @@ export function createHostedServer({
     }
     const isOAuth = req.url === '/oauth/mcp';
     if (req.url === OAUTH_METADATA_PATH) {
+      const metadataCors = typeof origin === 'string' && METADATA_CORS_ORIGINS.has(origin);
       if (!exchangeSecret) {
         jsonError(res, 404, 'OAuth account linking is unavailable.');
-      } else if (req.method !== 'GET') {
-        jsonError(res, 405, 'Only GET is supported.', { allow: 'GET' });
+      } else if (req.method === 'OPTIONS' && metadataCors) {
+        if (!isValidMetadataPreflight(req)) {
+          jsonError(res, 403, 'CORS preflight is not allowed.');
+        } else {
+          res.writeHead(204, { 'cache-control': 'no-store', 'access-control-max-age': '600' });
+          res.end();
+        }
+      } else if (req.method !== 'GET' && req.method !== 'HEAD') {
+        jsonError(res, 405, 'Only GET is supported.', { allow: 'GET, HEAD' });
       } else {
         const body = JSON.stringify(OAUTH_METADATA);
         res.writeHead(200, {
           'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store',
           'content-length': Buffer.byteLength(body),
         });
-        res.end(body);
+        res.end(req.method === 'HEAD' ? undefined : body);
       }
       return;
     }
