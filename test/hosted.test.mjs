@@ -1123,3 +1123,88 @@ test('OAuth rejection by Product after a successful exchange still triggers link
     assert.equal(exchanges, 1);
   } finally { await service.close(); }
 });
+
+test('OAuth metadata allows only the ChatGPT portal origins, read-only, without widening MCP origins', async () => {
+  const EXCHANGE_SECRET_FOR_CORS = 'synthetic-exchange-secret-cors';
+  let reads = 0;
+  const service = await hosted(async () => { reads += 1; return response({ sports: [] }); },
+    { exchangeSecret: EXCHANGE_SECRET_FOR_CORS });
+  try {
+    for (const portal of ['https://chatgpt.com', 'https://platform.openai.com']) {
+      const got = await rawRequest(service.origin, { method: 'GET', path: OAUTH_METADATA_PATH, headers: { Origin: portal } });
+      assert.equal(got.status, 200);
+      assert.equal(got.headers['access-control-allow-origin'], portal);
+      assert.equal(got.headers['access-control-allow-methods'], 'GET, HEAD, OPTIONS');
+      assert.equal(got.headers.vary, 'Origin');
+      assert.equal(got.headers['cache-control'], 'no-store');
+      assert.equal(JSON.parse(got.text).resource, OAUTH_RESOURCE);
+
+      const head = await rawRequest(service.origin, { method: 'HEAD', path: OAUTH_METADATA_PATH, headers: { Origin: portal } });
+      assert.equal(head.status, 200);
+      assert.equal(head.headers['access-control-allow-origin'], portal);
+      assert.equal(head.text, '');
+
+      for (const requestHeaders of [undefined, 'mcp-protocol-version', 'MCP-Protocol-Version']) {
+        const preflight = await rawRequest(service.origin, { method: 'OPTIONS', path: OAUTH_METADATA_PATH, headers: {
+          Origin: portal, 'Access-Control-Request-Method': 'GET',
+          ...(requestHeaders ? { 'Access-Control-Request-Headers': requestHeaders } : {}),
+        } });
+        assert.equal(preflight.status, 204);
+        assert.equal(preflight.headers['access-control-allow-origin'], portal);
+        assert.equal(preflight.headers['access-control-allow-methods'], 'GET, HEAD, OPTIONS');
+        assert.equal(preflight.headers['access-control-allow-headers'], 'Mcp-Protocol-Version');
+        assert.equal(preflight.headers.vary, 'Origin');
+      }
+      for (const headers of [
+        { Origin: portal, 'Access-Control-Request-Method': 'POST' },
+        { Origin: portal },
+        { Origin: portal, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'authorization' },
+        { Origin: portal, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'x-therundown-key' },
+      ]) {
+        const rejected = await rawRequest(service.origin, { method: 'OPTIONS', path: OAUTH_METADATA_PATH, headers });
+        assert.equal(rejected.status, 403);
+      }
+      // Writes to the metadata document stay rejected, with no CORS grant.
+      const write = await rawRequest(service.origin, { method: 'POST', path: OAUTH_METADATA_PATH,
+        headers: { Origin: portal, 'Content-Type': 'application/json' }, body: '{}' });
+      assert.equal(write.status, 403);
+      assert.equal(write.headers['access-control-allow-origin'], undefined);
+
+      // Every MCP endpoint keeps rejecting these origins, including the OAuth challenge path.
+      for (const path of ['/mcp', '/oauth/mcp', '/']) {
+        const blocked = await rawRequest(service.origin, { path, headers: {
+          Origin: portal, Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json',
+        }, body: REQUEST });
+        assert.equal(blocked.status, 403);
+        assert.equal(blocked.headers['access-control-allow-origin'], undefined);
+        const blockedPreflight = await rawRequest(service.origin, { method: 'OPTIONS', path, headers: {
+          Origin: portal, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'authorization',
+        } });
+        assert.equal(blockedPreflight.status, 403);
+      }
+    }
+
+    for (const other of ['https://example.com', 'http://chatgpt.com', 'https://chatgpt.com.example.com',
+      'https://evil.chatgpt.com', 'null']) {
+      const got = await rawRequest(service.origin, { method: 'GET', path: OAUTH_METADATA_PATH, headers: { Origin: other } });
+      assert.equal(got.status, 403);
+      assert.equal(got.headers['access-control-allow-origin'], undefined);
+      const preflight = await rawRequest(service.origin, { method: 'OPTIONS', path: OAUTH_METADATA_PATH, headers: {
+        Origin: other, 'Access-Control-Request-Method': 'GET' } });
+      assert.equal(preflight.status, 403);
+    }
+
+    // Anonymous OAuth initialization still challenges without an Origin header.
+    const challenge = await rawRequest(service.origin, { path: '/oauth/mcp', headers: {
+      Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json',
+    }, body: REQUEST });
+    assert.equal(challenge.status, 401);
+    assert.equal(challenge.headers['www-authenticate'],
+      `Bearer resource_metadata="${service.origin}${OAUTH_METADATA_PATH}", scope="mcp:read"`);
+    // No-Origin metadata reads are unchanged.
+    const plain = await rawRequest(service.origin, { method: 'GET', path: OAUTH_METADATA_PATH });
+    assert.equal(plain.status, 200);
+    assert.equal(plain.headers['access-control-allow-origin'], undefined);
+    assert.equal(reads, 0);
+  } finally { await service.close(); }
+});
