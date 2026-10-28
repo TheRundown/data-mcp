@@ -1,7 +1,10 @@
 # Hosted MCP adapter
 
-`hosted.mjs` is the Streamable HTTP adapter for the same six read-only tools
-exported by `server.mjs`. It is deployed and publicly reachable at
+`hosted.mjs` is the Streamable HTTP adapter for the source toolset exported by
+`server.mjs`. This configuration documentation does not establish the exact
+deployed image or tool inventory; dated public metadata is recorded in
+[README.md](README.md), with current discovery at
+https://therundown.io/.well-known/mcp.json. The endpoint is
 `https://mcp.therundown.io/mcp` (Streamable HTTP, `POST`). The local stdio MCP
 remains available as a separate install for operators who prefer not to depend
 on a hosted endpoint. It still makes HTTPS Product API calls with the operator's
@@ -133,7 +136,7 @@ messages; a bounded numeric `Retry-After` from an exchange `429` is preserved.
 Unavailable, redirected, malformed, incorrectly scoped, expired, or
 oversized responses return `503`. Exchange errors never expose response bodies,
 tokens, delegated credentials, or the service secret. Product entitlements,
-usage, and errors still come from the existing six tools and Product API.
+usage, and errors still come from the source tools and Product API.
 
 The local ZIP exporter excludes the HTTP listener and OAuth exchange helper;
 starting `server.mjs` continues to use stdio only. Network access is still

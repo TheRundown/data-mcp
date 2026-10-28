@@ -4,7 +4,9 @@
 
 The 0.4.0 source candidate registers 75 public REST operation tools, four bounded actual WebSocket capture tools, and six existing convenience tools. It uses the official MCP SDK and Node.js 22+. [COVERAGE.md](COVERAGE.md) lists exact routes, aliases, retired/private exclusions and transport limits.
 
-The hosted account connection is `https://mcp.therundown.io/oauth/mcp`; legacy `/` and `/mcp` accept Product API keys in authenticated headers. The last live proof on 2026-10-03 found version 0.3.0 with six tools. This expanded candidate is not yet deployed or publicly listed. A personal connection is not a directory listing. The separate documentation MCP at `https://docs.therundown.io/mcp` cannot return Product prices.
+The hosted account connection is `https://mcp.therundown.io/oauth/mcp`; legacy `/` and `/mcp` accept Product API keys in authenticated headers.
+
+On 2026-10-28, public initialize and `tools/list` metadata at `https://mcp.therundown.io/mcp` reported v0.4.0 and 85 tools, all annotated read-only; the check made zero Product calls. This count does not verify the exact source/image commit, every tool's Product behavior, OAuth, or directory approval. An earlier live check on 2026-10-03 reported v0.3.0 and six tools; that inventory is historical. Current discovery metadata is at [therundown.io/.well-known/mcp.json](https://therundown.io/.well-known/mcp.json). A personal connection is not a directory listing. The separate documentation MCP at `https://docs.therundown.io/mcp` cannot return Product prices.
 
 ChatGPT uses Streamable HTTP. Each capture opens a real upstream WebSocket, observes at most five seconds / 50 messages / 256 KiB, then closes. It is not a continuous background feed. See [COVERAGE.md](COVERAGE.md) for channel, snapshot and resume limits, and [HOSTED.md](HOSTED.md) for deployment requirements.
 
