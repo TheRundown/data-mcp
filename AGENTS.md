@@ -28,7 +28,7 @@ Use IDs from current API responses rather than guessing them. Exclude retired af
 
 Keep `THERUNDOWN_API_KEY` in the local environment or a client secret mechanism, and send it only in `X-TheRundown-Key`. Do not place real keys in prompts, source files, URLs, examples, logs, or client bundles. Respect plan entitlements, data delay, `X-Datapoints` usage, and `Retry-After`; read-only calls can be billed. Keep requests bounded and do not retry automatically after errors.
 
-The 0.4.0 source candidate registers 85 tools: six convenience tools, 75 public REST operations and four bounded actual WebSocket captures. Read [COVERAGE.md](COVERAGE.md) and the static catalog before extending it. Prefer V2; V1 is available for legacy contracts. Aliases map to canonical tools; retired/private/admin endpoints remain excluded. Source coverage is distinct from deployment and directory approval.
+Version 0.4.0 registers 85 tools: six convenience tools, 75 public REST operations and four bounded actual WebSocket captures. Read [COVERAGE.md](COVERAGE.md) and the static catalog before extending it. Prefer V2; V1 is available for legacy contracts. Aliases map to canonical tools; retired/private/admin endpoints remain excluded. Source coverage is distinct from deployment and directory approval.
 
 Live captures use HTTPS MCP externally and authenticated WebSockets upstream. Each call closes after at most five seconds / 50 messages / 256 KiB, with separate bounded handshake/close. There is no background stream or automatic reconnect. Only plays supports durable resume; stats needs a REST baseline. Preserve incomplete snapshots/replays and actual gap evidence.
 
