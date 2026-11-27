@@ -17,7 +17,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --omit=dev
 
-COPY server.mjs ./
+# server.mjs imports these modules since 0.4.0; without them the server
+# cannot start and Glama keeps its last inspection (six tools).
+COPY server.mjs product-api.mjs product-operations.json live-stream.mjs public-response.mjs ./
 
 USER node
 
