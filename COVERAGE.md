@@ -1,8 +1,8 @@
-# Product API coverage (0.4.0 candidate)
+# Product API coverage (0.4.0)
 
-Source coverage is not a claim of deployment or directory approval. The last live proof on 2026-10-03 found version 0.3.0 with six tools. A private ChatGPT connection is incomplete delivery.
+Source coverage is not a claim of deployment or directory approval. A live check on 2026-11-27 found version 0.4.0 with 85 tools on the hosted endpoint, under the same names this source registers. The 2026-10-03 proof that found version 0.3.0 with six tools is historical. A private ChatGPT connection is incomplete delivery.
 
-The candidate registers 85 tools: six convenience tools, 75 canonical REST operations and four real WebSocket captures. This covers all 61 public-docs REST paths plus 14 additional customer operations, 47 compatibility aliases and 12 explicitly retired registrations. Private/admin, internal push/assistant and account mutation routes are excluded. Aff27 OFF; #11832 HOLD (experimental propposev excluded).
+Version 0.4.0 registers 85 tools: six convenience tools, 75 canonical REST operations and four real WebSocket captures. This covers all 61 public-docs REST paths plus 14 additional customer operations, 47 compatibility aliases and 12 explicitly retired registrations. Private/admin, internal push/assistant and account mutation routes are excluded. Aff27 OFF; #11832 HOLD (experimental propposev excluded).
 
 ## REST operations
 

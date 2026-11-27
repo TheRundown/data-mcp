@@ -5,7 +5,7 @@
   ],
   "name": "therundown-data",
   "title": "TheRundown Data MCP",
-  "description": "Official read-only MCP server for TheRundown's sports odds Product API. Six tools list sports, affiliates, markets, events, open main-line odds, and futures, plus a therundown://brief resource. Runs locally over stdio with your own API key; the same tools are hosted at https://mcp.therundown.io/mcp.",
+  "description": "Official read-only MCP server for TheRundown's sports data API. Version 0.4.0 has 85 read-only tools: sportsbook odds, schedules, scores, player props and prediction-market lines from 25+ books, plus a therundown://brief resource. Run it locally over stdio with your own API key, or use the hosted server at https://mcp.therundown.io/mcp.",
   "repository": {
     "type": "git",
     "url": "https://github.com/TheRundown/data-mcp"

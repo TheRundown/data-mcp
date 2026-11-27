@@ -2,17 +2,17 @@
 
 > This is the official TheRundown source repository. `aigeon-ai/therundown` is unofficial.
 
-The 0.4.0 source candidate registers 75 public REST operation tools, four bounded actual WebSocket capture tools, and six existing convenience tools. It uses the official MCP SDK and Node.js 22+. [COVERAGE.md](COVERAGE.md) lists exact routes, aliases, retired/private exclusions and transport limits.
+Version 0.4.0 is released; the hosted server at `https://mcp.therundown.io/mcp` reports it. It registers 85 read-only tools: 75 public REST operation tools, four bounded actual WebSocket capture tools, and six existing convenience tools. It uses the official MCP SDK and Node.js 22+. [COVERAGE.md](COVERAGE.md) lists exact routes, aliases, retired/private exclusions and transport limits.
 
 The hosted account connection is `https://mcp.therundown.io/oauth/mcp`; legacy `/` and `/mcp` accept Product API keys in authenticated headers.
 
-On 2026-10-28, public initialize and `tools/list` metadata at `https://mcp.therundown.io/mcp` reported v0.4.0 and 85 tools, all annotated read-only; the check made zero Product calls. This count does not verify the exact source/image commit, every tool's Product behavior, OAuth, or directory approval. An earlier live check on 2026-10-03 reported v0.3.0 and six tools; that inventory is historical. Current discovery metadata is at [therundown.io/.well-known/mcp.json](https://therundown.io/.well-known/mcp.json). A personal connection is not a directory listing. The separate documentation MCP at `https://docs.therundown.io/mcp` cannot return Product prices.
+On 2026-11-27, public initialize and `tools/list` metadata at `https://mcp.therundown.io/mcp` reported v0.4.0 and 85 tools, all annotated read-only, and the 85 names matched the tools this source registers; that check made zero Product calls. Three read-only tool calls with an API key returned Product data the same day. This does not verify the exact source/image commit, every tool's Product behavior, OAuth, or directory approval. The same metadata was first recorded on 2026-10-28. An earlier live check on 2026-10-03 reported v0.3.0 and six tools; that inventory is historical. Current discovery metadata is at [therundown.io/.well-known/mcp.json](https://therundown.io/.well-known/mcp.json). A personal connection is not a directory listing. The separate documentation MCP at `https://docs.therundown.io/mcp` cannot return Product prices.
 
 ChatGPT uses Streamable HTTP. Each capture opens a real upstream WebSocket, observes at most five seconds / 50 messages / 256 KiB, then closes. It is not a continuous background feed. See [COVERAGE.md](COVERAGE.md) for channel, snapshot and resume limits, and [HOSTED.md](HOSTED.md) for deployment requirements.
 
 Anonymous metadata and ping make no Product calls. Every data tool requires local key authentication or the connected account on the OAuth route. Keep credentials out of prompts, URLs, source, logs and browser bundles.
 
-The historical source ZIP below remains 0.2.3 and does not include this candidate. There is no published npm package. That ZIP is stdio-only; `npm start` does not start the HTTP adapter.
+The historical source ZIP below remains 0.2.3, with six tools, and does not include the 0.4.0 tools. There is no published npm package. That ZIP is stdio-only; `npm start` does not start the HTTP adapter.
 
 Download the [versioned source bundle](https://therundown.io/downloads/therundown-data-mcp-0.2.3.zip), verify its [SHA-256 checksum](https://therundown.io/downloads/therundown-data-mcp-0.2.3.sha256), and extract it. The official ZIP is 41,072 bytes and its SHA-256 is `cb0a0841aa040f049ffddec5b5fa2436cb9de721a30a3bd53270132db7204025`. The [ZIP manifest](releases/0.2.3/MANIFEST.json) verifies every bundled source file. The ZIP README is generated from [BUNDLE-README.md](BUNDLE-README.md); this repository README also includes repository setup material. From the extracted ZIP directory:
 

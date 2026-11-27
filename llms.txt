@@ -20,7 +20,7 @@ The downloadable release is local stdio only. The hosted, authenticated
 Streamable HTTP endpoint at https://mcp.therundown.io/mcp is available
 separately; there is still no published npm package.
 
-The local server exposes exactly six read-only tools: list_sports, list_affiliates, list_markets, list_events, get_main_lines, and list_futures. Retired affiliate 27 is excluded. Use returned source URLs, timestamps, usage headers, and price update times. Do not invent IDs, odds, freshness, coverage, billing, or hosted availability.
+The downloadable 0.2.3 release exposes exactly six read-only tools: list_sports, list_affiliates, list_markets, list_events, get_main_lines, and list_futures. Version 0.4.0, in this source tree and on the hosted endpoint, registers 85 read-only tools; COVERAGE.md lists them. Retired affiliate 27 is excluded. Use returned source URLs, timestamps, usage headers, and price update times. Do not invent IDs, odds, freshness, coverage, billing, or hosted availability.
 Preserve participant, period, per-affiliate is_main_line, source_id, and
 affiliate_source_ids fields returned by the public Product API. Prematch market
 IDs 1/2/3 are distinct from live variants 41/42/43; request live variants
